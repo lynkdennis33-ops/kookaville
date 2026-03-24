@@ -1,0 +1,17 @@
+﻿src/app/(auth)/forgot-password/page.tsx(34,17): error TS2322: Type '{ children: Element; asChild: true; variant: "outline"; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/(chef)/dashboard/page.tsx(103,20): error TS2304: Cannot find name 'Badge'.
+src/app/(chef)/dashboard/page.tsx(103,81): error TS2304: Cannot find name 'Badge'.
+src/app/(client)/book/[id]/page.tsx(238,20): error TS2304: Cannot find name 'Star'.
+src/app/(client)/dashboard/messages/page.tsx(142,12): error TS2304: Cannot find name 'MessageSquare'.
+src/app/(client)/dashboard/page.tsx(51,53): error TS2322: Type '{ children: Element; variant: "outline"; size: "sm"; asChild: true; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/(client)/dashboard/page.tsx(75,55): error TS2322: Type '{ children: Element; variant: "ghost"; size: "icon"; asChild: true; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/components/shared/navbar.tsx(80,25): error TS2322: Type '{ children: Element; asChild: true; variant: "primary" | "secondary"; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/components/shared/navbar.tsx(173,27): error TS2322: Type '{ children: Element; asChild: true; variant: "outline"; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/components/shared/navbar.tsx(176,27): error TS2322: Type '{ children: Element; asChild: true; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/components/ui/calendar.tsx(50,9): error TS2353: Object literal may only specify known properties, and 'IconLeft' does not exist in type 'Partial<CustomComponents>'.

@@ -1,0 +1,59 @@
+﻿
+> private-chef-platform@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.0 (Turbopack)
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 8.9s
+  Running TypeScript ...
+  Finished TypeScript in 7.9s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/17) ...
+  Generating static pages using 3 workers (4/17) 
+  Generating static pages using 3 workers (8/17) 
+node.exe : Error 
+occurred prerendering 
+page "/". Read more: http
+s://nextjs.org/docs/messa
+ges/prerender-error
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo       
+       : NotSpecified:   
+  (Error occurred ...p   
+ rerender-error:Strin    
+g) [], RemoteExcepti    
+on
+    + FullyQualifiedErro 
+   rId : NativeCommandE  
+  rror
+ 
+Error: Event handlers 
+cannot be passed to 
+Client Component props.
+  {className: ..., 
+onClick: function 
+onClick, children: ...}
+                         
+   ^^^^^^^^^^^^^^^^
+If you need 
+interactivity, consider 
+converting part of this 
+to a Client Component.
+    at stringify 
+(<anonymous>) {
+  digest: '4285698486'
+}
+Export encountered an 
+error on /(client)/page: 
+/, exiting the build.
+Γ¿» Next.js build worker 
+exited with code: 1 and 
+signal: null
