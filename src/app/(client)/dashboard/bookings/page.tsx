@@ -1,15 +1,40 @@
-import React from 'react';
+"use client";
+
+import React, { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+
+function BookingsHeader() {
+  const searchParams = useSearchParams();
+  const isSuccess = searchParams.get('success') === 'true';
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">My Bookings</h1>
+          <p className="text-muted-foreground">Review your past and upcoming dining experiences.</p>
+        </div>
+      </div>
+
+      {isSuccess && (
+        <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+          <p className="text-sm font-semibold">Booking confirmed! We've sent the details to your email.</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ClientBookingsPage() {
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">My Bookings</h1>
-        <p className="text-muted-foreground">Review your past and upcoming dining experiences.</p>
-      </div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <BookingsHeader />
+      </Suspense>
 
       <Card>
         <CardHeader>

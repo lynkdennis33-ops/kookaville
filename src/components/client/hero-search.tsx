@@ -9,11 +9,11 @@ export function HeroSearch() {
     <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&q=80&auto=format&fit=crop"
-          alt="Fine dining experience"
+          src="https://images.unsplash.com/photo-1559339352-11d035aa65de?w=1920&q=80&auto=format&fit=crop"
+          alt="Exquisite private dining"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-primary/70 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center pt-10">

@@ -32,21 +32,21 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #111827;
+  --foreground: #0f172a; /* Slate 900 */
   
-  --primary: #111827; /* Dark Charcoal */
+  --primary: #2563eb; /* Royal Blue (Blue 600) */
   --primary-foreground: #ffffff;
   
-  --secondary: #f3f4f6;
-  --secondary-foreground: #111827;
+  --secondary: #f1f5f9; /* Slate 100 */
+  --secondary-foreground: #1e293b; /* Slate 800 */
   
-  --accent: #FF5A5F; /* Airbnb style pinkish-red */
+  --accent: #3b82f6; /* Bright Blue (Blue 500) */
   --accent-foreground: #ffffff;
   
-  --muted: #f9fafb;
-  --muted-foreground: #6b7280;
+  --muted: #f8fafc; /* Slate 50 */
+  --muted-foreground: #64748b; /* Slate 500 */
   
-  --border: #e5e7eb;
+  --border: #e2e8f0; /* Slate 200 */
   
   --radius: 0.75rem;
 }

@@ -74,11 +74,11 @@ export function Sidebar({ items, role }: { items: SidebarItem[], role: string })
 
 // Pre-defined sets
 export const CHEF_SIDEBAR_ITEMS: SidebarItem[] = [
-  { name: 'Dashboard', href: '/chef/dashboard', icon: LayoutDashboard },
-  { name: 'Bookings', href: '/chef/bookings', icon: Calendar },
-  { name: 'My Menus', href: '/chef/menus', icon: Utensils },
-  { name: 'Earnings', href: '/chef/earnings', icon: DollarSign },
-  { name: 'Settings', href: '/chef/settings', icon: Settings },
+  { name: 'Dashboard', href: '/chef-portal/dashboard', icon: LayoutDashboard },
+  { name: 'Bookings', href: '/chef-portal/bookings', icon: Calendar },
+  { name: 'My Menus', href: '/chef-portal/menus', icon: Utensils },
+  { name: 'Earnings', href: '/chef-portal/earnings', icon: DollarSign },
+  { name: 'Settings', href: '/chef-portal/settings', icon: Settings },
 ];
 
 export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [

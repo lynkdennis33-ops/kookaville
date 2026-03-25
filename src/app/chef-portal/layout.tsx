@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sidebar, CHEF_SIDEBAR_ITEMS } from '@/components/shared/sidebar';
 
-export default function ChefLayout({ children }: { children: React.ReactNode }) {
+export default function ChefPortalLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar items={CHEF_SIDEBAR_ITEMS} role="chef" />

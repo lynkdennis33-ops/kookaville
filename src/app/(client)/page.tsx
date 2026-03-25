@@ -20,7 +20,7 @@ export default function LandingPage() {
             <defs>
               <radialGradient id="gradient">
                 <stop stopColor="#ffffff" />
-                <stop offset="1" stopColor="#FF5A5F" />
+                <stop offset="1" stopColor="#3b82f6" />
               </radialGradient>
             </defs>
           </svg>

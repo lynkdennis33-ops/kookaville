@@ -1,10 +1,16 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, Heart, Settings, MessageSquare, CreditCard } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Calendar, Heart, Settings, MessageSquare, CreditCard, LayoutDashboard } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function ClientDashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   const tabs = [
-    { name: 'Overview', href: '/dashboard', icon: Calendar },
+    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Bookings', href: '/dashboard/bookings', icon: Calendar },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Saved Chefs', href: '/dashboard/saved', icon: Heart },
@@ -30,16 +36,24 @@ export default function ClientDashboardLayout({ children }: { children: React.Re
             </div>
 
             <nav className="space-y-1">
-              {tabs.map((tab) => (
-                <Link
-                  key={tab.name}
-                  href={tab.href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-                >
-                  <tab.icon className="h-5 w-5" />
-                  {tab.name}
-                </Link>
-              ))}
+              {tabs.map((tab) => {
+                const isActive = pathname === tab.href;
+                return (
+                  <Link
+                    key={tab.name}
+                    href={tab.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      isActive 
+                        ? "bg-secondary text-secondary-foreground shadow-sm" 
+                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    )}
+                  >
+                    <tab.icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
+                    {tab.name}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
         </aside>
