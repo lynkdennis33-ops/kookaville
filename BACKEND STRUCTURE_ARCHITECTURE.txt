@@ -1,0 +1,60 @@
+backend/
+│
+├── src/
+│
+├── config/
+│   ├── db.js
+│   ├── cloudinary.js
+│   └── stripe.js
+│
+├── models/
+│   ├── User.js
+│   ├── ChefProfile.js
+│   ├── Booking.js
+│   ├── Menu.js
+│   ├── Review.js
+│   ├── Message.js
+│   ├── Transaction.js
+│   └── Category.js
+│
+├── controllers/
+│   ├── auth.controller.js
+│   ├── chef.controller.js
+│   ├── booking.controller.js
+│   ├── review.controller.js
+│   ├── payment.controller.js
+│   ├── message.controller.js
+│   └── admin.controller.js
+│
+├── routes/
+│   ├── auth.routes.js
+│   ├── chef.routes.js
+│   ├── booking.routes.js
+│   ├── review.routes.js
+│   ├── payment.routes.js
+│   ├── message.routes.js
+│   └── admin.routes.js
+│
+├── middleware/
+│   ├── auth.js
+│   ├── roles.js
+│   ├── validate.js
+│   ├── upload.js
+│   └── errorHandler.js
+│
+├── services/
+│   ├── auth.service.js
+│   ├── booking.service.js
+│   ├── payment.service.js
+│   ├── email.service.js
+│   └── notification.service.js
+│
+├── sockets/
+│   └── chat.socket.js
+│
+├── utils/
+│   ├── generateToken.js
+│   ├── sendEmail.js
+│   └── pagination.js
+│
+└── server.js
