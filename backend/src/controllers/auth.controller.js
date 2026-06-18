@@ -45,6 +45,21 @@ class AuthController {
       next(error);
     }
   }
+
+  // Get currently authenticated user
+  async getCurrentUser(req, res, next) {
+    try {
+      // User is already attached to req.user by auth middleware
+      res.status(200).json({
+        success: true,
+        data: {
+          user: req.user,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AuthController();
