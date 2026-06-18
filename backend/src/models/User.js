@@ -93,7 +93,7 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcryptjs.compare(enteredPassword, this.password);
 };
 
-// Method to get user without password when user login in
+// Method to get user without password when user logs in
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();  // this convert mongo staff to useful javascript JSON simple data structure 
   delete obj.password;
