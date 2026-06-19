@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import errorHandler from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import chefRoutes from './routes/chef.routes.js';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/chef', chefRoutes);
 
 // 404 handler
 app.use((req, res) => {
