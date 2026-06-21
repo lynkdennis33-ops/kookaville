@@ -64,6 +64,91 @@ class ChefController {
       next(error);
     }
   }
+
+  /**
+   * Get all approved chefs for discovery with pagination and sorting
+   * Public route
+   * Query parameters: page, limit, sort
+   */
+  async getChefs(req, res, next) {
+    try {
+      const { page, limit, sort } = req.query;
+      const result = await chefService.getAllChefs({ page, limit, sort });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get a specific chef profile by ID
+   * Public route
+   * :id refers to ChefProfile _id
+   */
+  async getChef(req, res, next) {
+    try {
+      const { id } = req.params;
+      const chef = await chefService.getChefById(id);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          chef,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Search and filter approved chefs
+   * Public route
+   * Query parameters:
+   * - keyword: search in bio, specialties, cuisines (case-insensitive)
+   * - cuisine: filter by cuisine
+   * - serviceArea: filter by service area
+   * - minPrice: minimum price per person
+   * - maxPrice: maximum price per person
+   */
+  async searchChefs(req, res, next) {
+    try {
+      const chefs = await chefService.searchChefs(req.query);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          chefs,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get featured chefs for homepage
+   * Public route
+   * Returns first 6 approved chefs sorted by newest first
+   */
+  async getFeaturedChefs(req, res, next) {
+    try {
+      const chefs = await chefService.getFeaturedChefs();
+
+      res.status(200).json({
+        success: true,
+        data: {
+          chefs,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ChefController();

@@ -3,32 +3,36 @@ backend/
 ├── src/
 │
 ├── config/
-│   ├── db.js
+│   ├── db.js ✅
 │   ├── cloudinary.js
 │   └── stripe.js
 │
 ├── models/
-│   ├── User.js
-│   ├── ChefProfile.js
+│   ├── User.js ✅
+│   ├── ChefProfile.js ✅
 │   ├── Booking.js
 │   ├── Menu.js
 │   ├── Review.js
 │   ├── Message.js
 │   ├── Transaction.js
-│   └── Category.js
+│   └── Category.js ✅
 │
 ├── controllers/
-│   ├── auth.controller.js
-│   ├── chef.controller.js
+│   ├── auth.controller.js ✅
+│   ├── chef.controller.js ✅
+│   ├── category.controller.js ✅
+│   ├── user.controller.js ✅
 │   ├── booking.controller.js
-│   ├── review.controller.js
+│   ├── review.controller.js 
 │   ├── payment.controller.js
 │   ├── message.controller.js
 │   └── admin.controller.js
 │
 ├── routes/
-│   ├── auth.routes.js
-│   ├── chef.routes.js
+│   ├── auth.routes.js ✅
+│   ├── chef.routes.js ✅
+│   ├── category.routes.js ✅
+│   ├── user.routes.js ✅
 │   ├── booking.routes.js
 │   ├── review.routes.js
 │   ├── payment.routes.js
@@ -36,14 +40,17 @@ backend/
 │   └── admin.routes.js
 │
 ├── middleware/
-│   ├── auth.js
-│   ├── roles.js
-│   ├── validate.js
+│   ├── auth.js ✅
+│   ├── roles.js ✅
+│   ├── validate.js ✅
 │   ├── upload.js
-│   └── errorHandler.js
+│   └── errorHandler.js ✅
 │
 ├── services/
-│   ├── auth.service.js
+│   ├── auth.service.js ✅
+│   ├── category.service.js ✅
+│   ├── chef.service.js ✅
+│   ├── user.service.js ✅
 │   ├── booking.service.js
 │   ├── payment.service.js
 │   ├── email.service.js
@@ -53,10 +60,10 @@ backend/
 │   └── chat.socket.js
 │
 ├── utils/
-│   ├── generateToken.js
+│   ├── generateToken.js ✅
 │   ├── sendEmail.js
 │   └── pagination.js
 │
-└── server.js
+└── server.js ✅
 │
-└── app.js
+└── app.js ✅
