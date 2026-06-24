@@ -115,11 +115,10 @@ class ChefService {
       sortOrder = { pricePerPerson: 1 };
     } else if (sort === 'priceHigh') {
       sortOrder = { pricePerPerson: -1 };
-    } else if (sort === "ratingHigh") {
-    sortOrder = { averageRating: -1 };
-    }
-    else if (sort === "ratingLow") {
-        sortOrder = { averageRating: 1 };
+    } else if (sort === 'ratingHigh') {
+      sortOrder = { rating: -1 };
+    } else if (sort === 'ratingLow') {
+      sortOrder = { rating: 1 };
     }
 
     const query = { verificationStatus: 'approved' };

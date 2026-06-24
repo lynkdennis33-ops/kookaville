@@ -10,6 +10,7 @@ import chefRoutes from './routes/chef.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import menuRoutes from './routes/menu.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
+import reviewRoutes from './routes/review.routes.js';
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/api/chef', chefRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/menus', menuRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // 404 handler
 app.use((req, res) => {

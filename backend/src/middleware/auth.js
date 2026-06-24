@@ -6,6 +6,7 @@ import User from '../models/User.js';
  * Validates JWT token and attaches user to req.user
  */
 const auth = async (req, res, next) => {
+  console.log('Auth middleware invoked for path:');
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
