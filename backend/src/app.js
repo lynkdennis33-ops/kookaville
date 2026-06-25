@@ -11,6 +11,7 @@ import categoryRoutes from './routes/category.routes.js';
 import menuRoutes from './routes/menu.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import reviewRoutes from './routes/review.routes.js';
+import messageRoutes from './routes/message.routes.js';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/menus', menuRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/messages', messageRoutes);
 
 // 404 handler
 app.use((req, res) => {
