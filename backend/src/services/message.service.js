@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import ChefProfile from '../models/ChefProfile.js';
 import Message from '../models/Message.js';
+import { getIo } from '../sockets/io.js';
 
 class MessageService {
   /**
@@ -54,6 +55,13 @@ class MessageService {
       receiver: receiverId,
       booking: bookingId,
       message: message.trim(),
+    });
+
+    // Broadcast to all sockets in the booking room.
+    // Only emitted after a successful save — failures throw before reaching here.
+    getIo()?.to(bookingId).emit('newMessage', {
+      bookingId,
+      message: newMessage,
     });
 
     return newMessage;
