@@ -1,6 +1,7 @@
 import Review from '../models/Review.js';
 import Booking from '../models/Booking.js';
 import ChefProfile from '../models/ChefProfile.js';
+import notificationService from './notification.service.js';
 
 class ReviewService {
   /**
@@ -96,6 +97,19 @@ class ReviewService {
 
     // Recalculate and update the chef's aggregate rating
     await this._recalculateChefRating(chefId);
+
+    // Fetch the chef's user ID — chefId is a ChefProfile ID, not a User ID
+    const chefProfile = await ChefProfile.findById(chefId).select('user');
+
+    // Notify the chef of the new review
+    await notificationService.createNotification({
+      recipient: chefProfile.user,
+      title: 'New Review',
+      message: 'You received a new review.',
+      type: 'review',
+      referenceId: review._id,
+      referenceModel: 'Review',
+    });
 
     return review;
   }

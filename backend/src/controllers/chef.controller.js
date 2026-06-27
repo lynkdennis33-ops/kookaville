@@ -149,6 +149,38 @@ class ChefController {
       next(error);
     }
   }
+
+  /**
+   * Update a chef profile's verification status
+   * Admin-only route
+   * :id refers to ChefProfile _id
+   * Body: { status: 'approved' | 'rejected' | 'pending' }
+   */
+  async updateVerificationStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification status is required.',
+        });
+      }
+
+      const chefProfile = await chefService.updateVerificationStatus(id, status);
+
+      res.status(200).json({
+        success: true,
+        message: `Chef profile ${status}.`,
+        data: {
+          chefProfile,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ChefController();

@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import Menu from '../models/Menu.js';
 import ChefProfile from '../models/ChefProfile.js';
+import notificationService from './notification.service.js';
 
 class BookingService {
   /**
@@ -92,6 +93,17 @@ class BookingService {
     });
 
     await booking.save();
+
+    // Notify the chef of the new booking request — chefProfile is already in scope above
+    await notificationService.createNotification({
+      recipient: chefProfile.user,
+      title: 'New Booking Request',
+      message: 'You have received a new booking request.',
+      type: 'booking',
+      referenceId: booking._id,
+      referenceModel: 'Booking',
+    });
+
     return booking;
   }
 
@@ -276,6 +288,48 @@ class BookingService {
         populate: { path: 'user', select: 'firstName lastName' },
       })
       .populate('menu', 'name price');
+
+    // Send notification to the relevant party based on the new status.
+    // accepted / rejected / completed → notify the client
+    // cancelled (client action)       → notify the chef
+    if (status === 'accepted') {
+      await notificationService.createNotification({
+        recipient: updatedBooking.client._id,
+        title: 'Booking Accepted',
+        message: 'Your booking has been accepted.',
+        type: 'booking',
+        referenceId: updatedBooking._id,
+        referenceModel: 'Booking',
+      });
+    } else if (status === 'rejected') {
+      await notificationService.createNotification({
+        recipient: updatedBooking.client._id,
+        title: 'Booking Rejected',
+        message: 'Your booking has been rejected.',
+        type: 'booking',
+        referenceId: updatedBooking._id,
+        referenceModel: 'Booking',
+      });
+    } else if (status === 'completed') {
+      await notificationService.createNotification({
+        recipient: updatedBooking.client._id,
+        title: 'Booking Completed',
+        message: 'Your booking has been completed. Please leave a review.',
+        type: 'booking',
+        referenceId: updatedBooking._id,
+        referenceModel: 'Booking',
+      });
+    } else if (status === 'cancelled') {
+      // Chef user ID is nested inside the populated chef profile
+      await notificationService.createNotification({
+        recipient: updatedBooking.chef.user._id,
+        title: 'Booking Cancelled',
+        message: 'The client cancelled the booking.',
+        type: 'booking',
+        referenceId: updatedBooking._id,
+        referenceModel: 'Booking',
+      });
+    }
 
     return updatedBooking;
   }

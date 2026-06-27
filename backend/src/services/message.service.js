@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import ChefProfile from '../models/ChefProfile.js';
 import Message from '../models/Message.js';
 import { getIo } from '../sockets/io.js';
+import notificationService from './notification.service.js';
 
 class MessageService {
   /**
@@ -62,6 +63,16 @@ class MessageService {
     getIo()?.to(bookingId).emit('newMessage', {
       bookingId,
       message: newMessage,
+    });
+
+    // Notify the receiver of the new message
+    await notificationService.createNotification({
+      recipient: receiverId,
+      title: 'New Message',
+      message: 'You received a new message.',
+      type: 'message',
+      referenceId: bookingId,
+      referenceModel: 'Booking',
     });
 
     return newMessage;

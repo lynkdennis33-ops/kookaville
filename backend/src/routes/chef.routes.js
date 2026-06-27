@@ -1,6 +1,7 @@
 import express from 'express';
 import chefController from '../controllers/chef.controller.js';
 import auth from '../middleware/auth.js';
+import authorize from '../middleware/roles.js';
 
 const router = express.Router();
 
@@ -34,6 +35,11 @@ router.get('/featured', chefController.getFeaturedChefs.bind(chefController));
 // GET specific chef by ID - Public route
 // :id refers to ChefProfile _id
 router.get('/:id', chefController.getChef.bind(chefController));
+
+// PATCH update chef verification status - Admin only
+// :id refers to ChefProfile _id
+// Body: { status: 'approved' | 'rejected' | 'pending' }
+router.patch('/:id/verification', auth, authorize('admin'), chefController.updateVerificationStatus.bind(chefController));
 
 
 export default router;

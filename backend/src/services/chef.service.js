@@ -1,4 +1,5 @@
 import ChefProfile from '../models/ChefProfile.js';
+import notificationService from './notification.service.js';
 
 class ChefService {
   /**
@@ -236,6 +237,54 @@ class ChefService {
       .limit(6);
 
     return chefs;
+  }
+
+  /**
+   * Update a chef profile's verification status (admin only)
+   * Sends the chef a system notification on approval or rejection
+   */
+  async updateVerificationStatus(chefProfileId, status) {
+    // Validate status value
+    const allowed = ['pending', 'approved', 'rejected'];
+    if (!allowed.includes(status)) {
+      const error = new Error(
+        `Invalid verification status. Must be one of: ${allowed.join(', ')}.`
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Update and return the latest profile in a single operation
+    const chefProfile = await ChefProfile.findByIdAndUpdate(
+      chefProfileId,
+      { verificationStatus: status },
+      { new: true, runValidators: true }
+    );
+
+    if (!chefProfile) {
+      const error = new Error('Chef profile not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Notify the chef — system notification, no referenceId needed
+    if (status === 'approved') {
+      await notificationService.createNotification({
+        recipient: chefProfile.user,
+        title: 'Chef Profile Approved',
+        message: 'Your chef profile has been approved.',
+        type: 'system',
+      });
+    } else if (status === 'rejected') {
+      await notificationService.createNotification({
+        recipient: chefProfile.user,
+        title: 'Chef Profile Rejected',
+        message: 'Your chef profile was rejected.',
+        type: 'system',
+      });
+    }
+
+    return chefProfile;
   }
 }
 
