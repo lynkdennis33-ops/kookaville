@@ -13,6 +13,7 @@ import bookingRoutes from './routes/booking.routes.js';
 import reviewRoutes from './routes/review.routes.js';
 import messageRoutes from './routes/message.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // 404 handler
 app.use((req, res) => {
