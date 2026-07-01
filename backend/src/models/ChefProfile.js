@@ -136,6 +136,21 @@ const chefProfileSchema = new mongoose.Schema(
       enum: ['pending', 'approved', 'rejected'],
       default: 'pending',
     },
+    // WHY verification audit fields:
+    //   The platform must maintain a complete audit trail of administrative actions.
+    //   Recording which admin verified a chef, when, and with what notes enables
+    //   accountability, allows review of verification decisions, and supports
+    //   appeals or reversals.  These fields enable a complete verification workflow.
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    verifiedAt: Date,
+    verificationNotes: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     rating: {
       type: Number,
       default: 0,
