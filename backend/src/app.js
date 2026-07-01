@@ -38,6 +38,16 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parsing middleware
+//
+// IMPORTANT — Stripe webhook signature verification requires the RAW request body
+// (the exact bytes Stripe signed). express.json() parses the body into a JS object
+// and discards the raw buffer, which breaks stripe.webhooks.constructEvent().
+//
+// Solution: apply express.raw() specifically for the webhook path BEFORE express.json().
+// body-parser sets req._body = true after it runs, which causes the next body-parser
+// (express.json()) to skip re-parsing the request — so all other routes are unaffected.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

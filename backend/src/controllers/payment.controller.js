@@ -33,6 +33,44 @@ class PaymentController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/payments/history
+   * Protected route — any authenticated user (client, chef, admin).
+   * Delegates to paymentService which applies role-based filtering.
+   */
+  async getPaymentHistory(req, res, next) {
+    try {
+      const transactions = await paymentService.getPaymentHistory(req.user);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          transactions,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/payments/webhook
+   * Public route — called by Stripe, NOT by an authenticated user.
+   * Delegates signature verification and event handling to paymentService.
+   * Always returns { received: true } on success so Stripe stops retrying.
+   */
+  async handleWebhook(req, res, next) {
+    try {
+      await paymentService.handleWebhook(req);
+
+      // Acknowledge receipt to Stripe.  If we return anything other than a
+      // 2xx status code, Stripe will retry the webhook delivery.
+      res.status(200).json({ received: true });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new PaymentController();
