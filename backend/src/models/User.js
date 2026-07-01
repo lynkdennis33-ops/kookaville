@@ -79,6 +79,27 @@ const userSchema = new mongoose.Schema(
     dateOfBirth: {
       type: Date,
     },
+    // WHY suspension audit fields:
+    //   The platform must maintain a complete audit trail of administrative actions.
+    //   Recording who suspended a user, when, and why enables accountability,
+    //   allows admins to review suspension decisions, and supports reversal workflows.
+    //   These fields enable a complete suspension/unsuspension lifecycle.
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+    suspendedAt: {
+      type: Date,
+    },
+    suspendedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    suspensionReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   {
     timestamps: true,
