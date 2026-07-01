@@ -82,6 +82,41 @@ class UserController {
       next(error);
     }
   }
+
+  /**
+   * Update profile picture
+   * Protected route — every authenticated user (client, chef, admin) can update
+   * their own avatar.
+   *
+   * Responsibilities (controller layer only):
+   *   - Validate that a file was attached to the request
+   *   - Delegate all upload and persistence logic to the service
+   *   - Return the standardised success response
+   */
+  async updateProfilePicture(req, res, next) {
+    try {
+      // Validate that multer placed a file on the request.
+      // If no file is present the request is malformed and we reject it early
+      // before touching the database or Cloudinary.
+      if (!req.file) {
+        const error = new Error('No file uploaded. Please attach an image with field name "avatar".');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const avatar = await userService.updateProfilePicture(req.user._id, req.file.buffer);
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile picture updated successfully.',
+        data: {
+          avatar,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new UserController();

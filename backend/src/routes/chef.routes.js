@@ -2,6 +2,7 @@ import express from 'express';
 import chefController from '../controllers/chef.controller.js';
 import auth from '../middleware/auth.js';
 import authorize from '../middleware/roles.js';
+import { uploadMultiple, uploadCertificate } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -17,6 +18,64 @@ router.get('/profile', auth, chefController.getProfile.bind(chefController));
 
 // PATCH update chef profile
 router.patch('/profile', auth, chefController.updateProfile.bind(chefController));
+
+// ── Gallery ──────────────────────────────────────────────────────────────────
+
+// POST upload one or more gallery images
+// Protected — chef role only
+// Field name: "images" (multipart/form-data), max 10 files per request
+router.post(
+  '/gallery',
+  auth,
+  authorize('chef'),
+  uploadMultiple,
+  chefController.addGalleryImages.bind(chefController)
+);
+
+// DELETE remove one gallery image by its MongoDB _id
+// Protected — chef role only
+// :imageId is the MongoDB _id of the gallery subdocument, NOT the Cloudinary publicId
+router.delete(
+  '/gallery/:imageId',
+  auth,
+  authorize('chef'),
+  chefController.deleteGalleryImage.bind(chefController)
+);
+
+// ── Certificates ────────────────────────────────────────────────────────────
+
+// POST upload a certificate
+// Protected — chef role only
+// Field name: "certificate" (multipart/form-data, single file)
+// Body: { title, issuer?, issueDate?, expiryDate? }
+router.post(
+  '/certificates',
+  auth,
+  authorize('chef'),
+  uploadCertificate,
+  chefController.uploadCertificate.bind(chefController)
+);
+
+// GET all certificates for the authenticated chef
+// Protected — chef role only
+router.get(
+  '/certificates',
+  auth,
+  authorize('chef'),
+  chefController.getCertificates.bind(chefController)
+);
+
+// DELETE one certificate
+// Protected — chef role only
+// :certificateId is the MongoDB _id of the certificate subdocument
+router.delete(
+  '/certificates/:certificateId',
+  auth,
+  authorize('chef'),
+  chefController.deleteCertificate.bind(chefController)
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 
 

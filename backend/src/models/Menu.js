@@ -22,9 +22,20 @@ const menuSchema = new mongoose.Schema(
       required: [true, 'Price is required'],
       min: [0, 'Price cannot be negative'],
     },
-    images: {
-      type: [String],
-      default: [],
+    // WHY publicId is stored alongside url:
+    //   Cloudinary identifies and deletes assets by public_id, not by URL.
+    //   Storing only the URL makes replacement impossible without parsing the
+    //   URL string, which is fragile and couples the code to Cloudinary's URL
+    //   format.  Storing both fields keeps deletion and replacement simple.
+    image: {
+      url: {
+        type: String,
+        default: '',
+      },
+      publicId: {
+        type: String,
+        default: '',
+      },
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,

@@ -85,6 +85,40 @@ class MenuController {
       next(error);
     }
   }
+
+  /**
+   * Update the image for a specific menu.
+   * Protected — chef role only. Only the owning chef may update a menu's image.
+   *
+   * Controller responsibilities:
+   *   - Confirm that multer attached a file to the request
+   *   - Delegate all upload and persistence logic to the service
+   *   - Return the 200 response with the updated image object
+   */
+  async updateMenuImage(req, res, next) {
+    try {
+      // Validate that multer placed a file on the request.
+      // Reject early so we never hit the service or Cloudinary without a file.
+      if (!req.file) {
+        const error = new Error('No file uploaded. Please attach an image with field name "image".');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const { menuId } = req.params;
+      const image = await menuService.updateMenuImage(req.user._id, menuId, req.file.buffer);
+
+      res.status(200).json({
+        success: true,
+        message: 'Menu image updated successfully.',
+        data: {
+          image,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new MenuController();

@@ -70,6 +70,21 @@ const upload = multer({
 export const uploadSingle = upload.single('image');
 
 /**
+ * Middleware for a single avatar file upload.
+ * Expects the field name "avatar" in the multipart form.
+ *
+ * WHY a dedicated export instead of reusing uploadSingle:
+ *   Multer binds the field name at the point upload.single() is called.
+ *   Profile picture uploads use the field name "avatar" (not "image") so that
+ *   clients send a semantically clear field and future middleware can distinguish
+ *   avatar uploads from generic image uploads.
+ *
+ * Usage:
+ *   router.patch('/profile-picture', auth, uploadAvatar, yourController.handler);
+ */
+export const uploadAvatar = upload.single('avatar');
+
+/**
  * Middleware for multiple file uploads (max 10).
  * Expects the field name "images" in the multipart form.
  *
@@ -77,6 +92,58 @@ export const uploadSingle = upload.single('image');
  *   router.post('/upload', auth, uploadMultiple, yourController.handler);
  */
 export const uploadMultiple = upload.array('images', 10);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Certificate upload middleware
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Certificate-specific MIME types: PDF and images.
+ * PDFs are proof documents; images (JPG, PNG) are scanned certificates.
+ * WebP is excluded because certificates are typically archived in standard formats.
+ */
+const CERTIFICATE_ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+
+/**
+ * 10 MB limit for certificates (larger than images to support multi-page PDFs).
+ */
+const CERTIFICATE_MAX_SIZE = 10 * 1024 * 1024;
+
+/**
+ * Certificate-specific file filter.
+ */
+const certificateFilter = (req, file, cb) => {
+  if (CERTIFICATE_ALLOWED_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    const error = new Error(
+      `Invalid file type "${file.mimetype}". Only PDF, JPEG, and PNG are accepted for certificates.`
+    );
+    error.statusCode = 400;
+    cb(error, false);
+  }
+};
+
+/**
+ * Dedicated multer instance for certificate uploads.
+ * Allows PDF and images, enforces 10 MB limit.
+ */
+const certificateUpload = multer({
+  storage,
+  fileFilter: certificateFilter,
+  limits: {
+    fileSize: CERTIFICATE_MAX_SIZE,
+  },
+});
+
+/**
+ * Middleware for a single certificate file upload.
+ * Expects the field name "certificate" in the multipart form.
+ *
+ * Usage:
+ *   router.post('/certificates', auth, uploadCertificate, yourController.handler);
+ */
+export const uploadCertificate = certificateUpload.single('certificate');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cloudinary upload helper
@@ -138,4 +205,31 @@ export const uploadToCloudinary = (buffer, folder) => {
     // Pipe the in-memory Buffer into the Cloudinary upload stream.
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cloudinary delete helper
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Delete a previously uploaded image from Cloudinary by its public_id.
+ *
+ * WHY we delete before uploading a replacement:
+ *   Every upload creates a new asset in Cloudinary.  If we upload a replacement
+ *   without deleting the old file, the previous image becomes an orphan — it
+ *   consumes storage quota but can no longer be reached through the database.
+ *   Deleting first keeps the Cloudinary account clean and avoids unexpected
+ *   storage costs as the user base grows.
+ *
+ * @param {string} publicId - The Cloudinary public_id of the asset to remove
+ * @returns {Promise<void>}
+ */
+export const deleteFromCloudinary = async (publicId) => {
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (error) {
+    // Log but do not throw — a failed delete should not block the new upload.
+    // The old asset may already be missing (e.g. manually removed from dashboard).
+    console.error(`Failed to delete Cloudinary asset "${publicId}":`, error.message);
+  }
 };

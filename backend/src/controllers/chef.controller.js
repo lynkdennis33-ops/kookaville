@@ -181,6 +181,139 @@ class ChefController {
       next(error);
     }
   }
+
+  /**
+   * Upload one or more images to the chef's gallery.
+   * Protected — chef role only.
+   *
+   * Controller responsibilities:
+   *   - Confirm that multer attached at least one file
+   *   - Delegate all upload and persistence logic to the service
+   *   - Return the 201 response with the updated gallery
+   */
+  async addGalleryImages(req, res, next) {
+    try {
+      // Multer populates req.files (array) when using upload.array().
+      // Reject the request early if no files were attached so we never
+      // hit the service with an empty array.
+      if (!req.files || req.files.length === 0) {
+        const error = new Error('No files uploaded. Please attach at least one image with field name "images".');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const buffers = req.files.map((f) => f.buffer);
+      const gallery = await chefService.addGalleryImages(req.user._id, buffers);
+
+      res.status(201).json({
+        success: true,
+        message: 'Gallery updated successfully.',
+        data: {
+          gallery,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete one image from the chef's gallery.
+   * Protected — chef role only.
+   *
+   * Controller responsibilities:
+   *   - Forward the MongoDB imageId from the URL param to the service
+   *   - Return 200 on success
+   */
+  async deleteGalleryImage(req, res, next) {
+    try {
+      const { imageId } = req.params;
+      await chefService.deleteGalleryImage(req.user._id, imageId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Gallery image deleted successfully.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Upload a certificate file with metadata.
+   * Protected — chef role only.
+   *
+   * Controller responsibilities:
+   *   - Confirm that multer attached a file
+   *   - Extract metadata from the request body
+   *   - Delegate all upload and persistence logic to the service
+   *   - Return 201 with the newly created certificate
+   */
+  async uploadCertificate(req, res, next) {
+    try {
+      if (!req.file) {
+        const error = new Error('No file uploaded. Please attach a certificate with field name "certificate".');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const { title, issuer, issueDate, expiryDate } = req.body;
+      const certificate = await chefService.uploadCertificate(req.user._id, req.file.buffer, {
+        title,
+        issuer,
+        issueDate,
+        expiryDate,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Certificate uploaded successfully.',
+        data: {
+          certificate,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all certificates for the authenticated chef.
+   * Protected — chef role only.
+   */
+  async getCertificates(req, res, next) {
+    try {
+      const certificates = await chefService.getCertificates(req.user._id);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          certificates,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete one certificate.
+   * Protected — chef role only.
+   * Only the owning chef may delete their own certificates.
+   */
+  async deleteCertificate(req, res, next) {
+    try {
+      const { certificateId } = req.params;
+      await chefService.deleteCertificate(req.user._id, certificateId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Certificate deleted successfully.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ChefController();

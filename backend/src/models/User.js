@@ -48,9 +48,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // WHY publicId is stored alongside url:
+    //   Cloudinary identifies assets by public_id, not by URL.  Deleting or
+    //   replacing an image requires the public_id.  Storing only the URL forces
+    //   us to parse or reconstruct the id from the URL string, which is fragile
+    //   and breaks if Cloudinary changes their URL format.  Keeping both fields
+    //   makes image replacement and deletion straightforward and reliable.
     avatar: {
-      type: String,
-      default: '',
+      url: {
+        type: String,
+        default: '',
+      },
+      publicId: {
+        type: String,
+        default: '',
+      },
     },
     address: {
       type: String,
