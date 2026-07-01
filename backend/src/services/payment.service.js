@@ -185,8 +185,30 @@ class PaymentService {
       return;
     }
 
+    // ── Calculate escrow amounts ────────────────────────────────────────────
+    // The platform retains a commission percentage; the remainder belongs to
+    // the chef.  Funds are held on the platform (payoutStatus = 'held') until
+    // the booking is marked completed — at which point releaseChefPayout()
+    // transitions payoutStatus to 'ready'.
+    //
+    // WHY we hold funds:
+    //   Releasing payment before the service is delivered creates a chargeback
+    //   risk for the platform.  Holding until completion protects both parties.
+    //
+    // WHY no Stripe transfer here:
+    //   Stripe Connect (which handles actual bank transfers) is not implemented
+    //   in this MVP.  When it is, the 'ready' payoutStatus will be the trigger
+    //   for a scheduled transfer job to call stripe.transfers.create().
+    const commissionPercentage = 10;
+    const commissionAmount = (transaction.amount * commissionPercentage) / 100;
+    const chefEarnings = transaction.amount - commissionAmount;
+
     // ── Update Transaction ──────────────────────────────────────────────────
     transaction.status = 'paid';
+    transaction.payoutStatus = 'held';
+    transaction.platformCommissionPercentage = commissionPercentage;
+    transaction.platformCommissionAmount = commissionAmount;
+    transaction.chefEarnings = chefEarnings;
     await transaction.save();
 
     // ── Update Booking ──────────────────────────────────────────────────────
@@ -229,7 +251,64 @@ class PaymentService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Phase 12C — Payment History
+  // Phase 12D — Escrow Release
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Mark a paid transaction as ready-for-payout once the booking completes.
+   *
+   * Called automatically by booking.service.js when booking.status becomes
+   * 'completed'.  The frontend MUST NOT call this endpoint directly.
+   *
+   * WHY payouts only become ready after booking completion:
+   *   The chef earns the fee by delivering the service.  Releasing funds
+   *   before the event happens would incentivise no-shows and complicate
+   *   refund handling.  Completion is the contractual proof of delivery.
+   *
+   * WHY no Stripe transfer occurs here:
+   *   Actual disbursement to a chef's bank account requires Stripe Connect
+   *   (connected accounts, transfer objects, payout schedules).  That
+   *   infrastructure is out of scope for this MVP.  Setting payoutStatus =
+   *   'ready' creates a clear audit trail that a future scheduled job (or
+   *   admin action) can consume to trigger real transfers.
+   *
+   * @param {string|mongoose.Types.ObjectId} bookingId
+   * @returns {Promise<void>}
+   */
+  async releaseChefPayout(bookingId) {
+    // ── 1. Find the transaction linked to this booking ──────────────────────
+    const transaction = await Transaction.findOne({ booking: bookingId });
+
+    if (!transaction) {
+      const error = new Error('No transaction found for this booking.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // ── 2. Ensure payment was actually received ─────────────────────────────
+    if (transaction.status !== 'paid') {
+      const error = new Error('Booking has not been paid.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // ── 3. Idempotency guard ────────────────────────────────────────────────
+    // If the payout has already been marked ready or paid, there is nothing
+    // further to do.  This protects against duplicate webhook deliveries or
+    // accidental double-calls.
+    if (transaction.payoutStatus !== 'held') {
+      return;
+    }
+
+    // ── 4. Transition to ready ──────────────────────────────────────────────
+    // No Stripe transfer is created here — see method-level comment above.
+    transaction.payoutStatus = 'ready';
+    transaction.payoutReadyDate = new Date();
+    await transaction.save();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Phase 12C — Payment History (updated in 12D with field projection)
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
@@ -278,8 +357,27 @@ class PaymentService {
       throw error;
     }
 
+    // ── Apply role-based field projection ─────────────────────────────────
+    // Each role receives only the fields relevant to them.  Sensitive
+    // commission data is hidden from clients and chefs.
+    //
+    // client — sees payment info only; payout/commission fields are hidden
+    // chef   — sees own earnings and payout state; commission amounts hidden
+    // admin  — sees all fields
+    if (user.role === 'client') {
+      query = query.select(
+        'booking client chef amount currency status createdAt'
+      );
+    } else if (user.role === 'chef') {
+      query = query.select(
+        'booking client chef amount currency status createdAt ' +
+        'chefEarnings payoutStatus payoutReadyDate payoutPaidDate'
+      );
+    }
+    // admin: no .select() — Mongoose returns all fields by default
+
     // Populate the booking reference, the client's basic info, and the chef
-    // ChefProfile reference.  Only select the fields callers actually need.
+    // ChefProfile reference.
     const transactions = await query
       .populate('booking')
       .populate('client', 'firstName lastName email')

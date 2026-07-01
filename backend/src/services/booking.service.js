@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import Menu from '../models/Menu.js';
 import ChefProfile from '../models/ChefProfile.js';
 import notificationService from './notification.service.js';
+import paymentService from './payment.service.js';
 
 class BookingService {
   /**
@@ -311,6 +312,20 @@ class BookingService {
         referenceModel: 'Booking',
       });
     } else if (status === 'completed') {
+      // Release escrow: transition the transaction's payoutStatus from
+      // 'held' → 'ready' so the chef becomes eligible for payout.
+      // Errors are caught and logged rather than propagated — the booking
+      // status update has already been committed and should not be rolled
+      // back if, for example, the booking was never paid (edge case).
+      try {
+        await paymentService.releaseChefPayout(updatedBooking._id);
+      } catch (payoutError) {
+        console.error(
+          `[BookingService] releaseChefPayout failed for booking ${updatedBooking._id}:`,
+          payoutError.message
+        );
+      }
+
       await notificationService.createNotification({
         recipient: updatedBooking.client._id,
         title: 'Booking Completed',
