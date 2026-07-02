@@ -100,6 +100,21 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    // WHY password reset fields are stored:
+    //   Enables secure password reset workflow without requiring email verification.
+    //   Token is hashed (never stored in plain text) to prevent compromise if database is breached.
+    //   Expiration time ensures tokens are only valid for a limited window (15-30 minutes).
+    //   Tokens are cleared after successful password reset to prevent reuse.
+    passwordResetToken: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   {
     timestamps: true,

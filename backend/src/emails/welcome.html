@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Lumière</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .role-badge {
+            display: inline-block;
+            background-color: #667eea;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+        .description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+        .role-specific {
+            background-color: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .role-specific h3 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+            font-size: 16px;
+        }
+        .role-specific ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .role-specific li {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #555;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #667eea;
+            color: #ffffff;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .cta-button:hover {
+            background-color: #5568d3;
+        }
+        .footer {
+            background-color: #f5f5f5;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>✨ Lumière ✨</h1>
+            <p>Your Private Chef Marketplace</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Welcome to Lumière, {{name}}!</p>
+
+            <div class="role-badge">{{role}}</div>
+
+            <p class="description">
+                We're thrilled to have you join our community. Lumière connects food lovers with exceptional private chefs, 
+                making it easy to book personalized culinary experiences for any occasion.
+            </p>
+
+            <!-- Role-specific content -->
+            {{roleContent}}
+
+            <p style="text-align: center;">
+                <a href="https://lumiere.app" class="cta-button">Get Started</a>
+            </p>
+
+            <div class="divider"></div>
+
+            <p style="font-size: 14px; color: #666;">
+                <strong>Need help?</strong> Our support team is here for you. Reply to this email or visit our 
+                <a href="https://lumiere.app/help" style="color: #667eea; text-decoration: none;">Help Center</a>.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p style="margin: 0;">
+                Lumière Private Chef Platform<br>
+                &copy; 2026 All rights reserved<br>
+                <a href="https://lumiere.app/privacy">Privacy Policy</a> | 
+                <a href="https://lumiere.app/terms">Terms of Service</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
