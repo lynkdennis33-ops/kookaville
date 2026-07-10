@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import Transaction from '../models/Transaction.js';
 import ChefProfile from '../models/ChefProfile.js';
 import stripe from '../config/stripe.js';
+import emailService from './email.service.js';
 
 class PaymentService {
   /**
@@ -218,6 +219,65 @@ class PaymentService {
       paymentStatus: 'paid',
       paymentDate: new Date(),
     });
+
+    // ── Send payment receipt email ──────────────────────────────────────────
+    // WHY email is sent here and not in createPaymentIntent:
+    //   A receipt confirms funds have been captured.  That only becomes true
+    //   when Stripe fires payment_intent.succeeded.  Sending earlier would be
+    //   factually incorrect and misleading to the client.
+    // WHY try/catch wraps the email send:
+    //   An SMTP failure must never cause the webhook to return a non-2xx
+    //   response.  If that happened Stripe would retry the event, potentially
+    //   double-updating the transaction.  Payment records are the source of
+    //   truth; email is a notification layer only.
+    try {
+      // Populate the minimum fields needed for the receipt — email and names
+      // are not stored on the Transaction document itself.
+      const populatedTx = await Transaction
+        .findById(transaction._id)
+        .populate('client', 'firstName lastName email')
+        .populate('booking', 'bookingDate eventTime')
+        .populate({
+          path: 'chef',
+          populate: { path: 'user', select: 'firstName lastName' },
+        });
+
+      if (populatedTx?.client?.email) {
+        const chefName = populatedTx.chef?.user
+          ? `${populatedTx.chef.user.firstName} ${populatedTx.chef.user.lastName}`
+          : 'Your Chef';
+
+        const paymentData = {
+          clientName:    `${populatedTx.client.firstName} ${populatedTx.client.lastName}`,
+          bookingId:     populatedTx.booking._id.toString().slice(-8).toUpperCase(),
+          transactionId: transaction._id.toString().slice(-8).toUpperCase(),
+          paymentDate:   new Date().toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          }),
+          amount:        `${transaction.currency} ${transaction.amount.toFixed(2)}`,
+          currency:      transaction.currency,
+          paymentStatus: 'Paid',
+          chefName,
+          eventDate:     populatedTx.booking?.bookingDate
+            ? new Date(populatedTx.booking.bookingDate).toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+              })
+            : '—',
+          location: 'Not specified',
+        };
+
+        await emailService.sendPaymentReceiptEmail(
+          populatedTx.client.email,
+          populatedTx.client.firstName,
+          paymentData
+        );
+      }
+    } catch (emailErr) {
+      console.error(
+        `[PaymentService] Payment receipt email failed for transaction ${transaction._id}:`,
+        emailErr.message
+      );
+    }
   }
 
   // ── Private: payment_intent.payment_failed ──────────────────────────────
@@ -248,6 +308,43 @@ class PaymentService {
     await transaction.save();
     // NOTE: Booking.paymentStatus is NOT updated here.  A failed payment does
     // not invalidate the booking — the client can attempt payment again.
+
+    // ── Send payment failed notification email ──────────────────────────────
+    // WHY this email is sent even though no charge was made:
+    //   The client may no longer have the payment page open when the failure
+    //   occurs (bank declined asynchronously, mobile network drop, etc.).
+    //   Notifying them by email ensures they know to retry and that the booking
+    //   itself has not been cancelled.
+    // WHY try/catch is used:
+    //   Same reason as in _handlePaymentIntentSucceeded — an email failure must
+    //   not prevent the webhook from returning 200 to Stripe.
+    try {
+      const populatedTx = await Transaction
+        .findById(transaction._id)
+        .populate('client', 'firstName lastName email')
+        .populate('booking', '_id');
+
+      if (populatedTx?.client?.email) {
+        const paymentData = {
+          clientName:    `${populatedTx.client.firstName} ${populatedTx.client.lastName}`,
+          bookingId:     populatedTx.booking?._id.toString().slice(-8).toUpperCase() ?? '—',
+          amount:        `${transaction.currency} ${transaction.amount.toFixed(2)}`,
+          currency:      transaction.currency,
+          failureStatus: 'Payment Failed',
+        };
+
+        await emailService.sendPaymentFailedEmail(
+          populatedTx.client.email,
+          populatedTx.client.firstName,
+          paymentData
+        );
+      }
+    } catch (emailErr) {
+      console.error(
+        `[PaymentService] Payment failed email failed for transaction ${transaction._id}:`,
+        emailErr.message
+      );
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

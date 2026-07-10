@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kookaville Booking Update</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        /* ── Header ───────────────────────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        /* ── Content area ─────────────────────────────────────────────── */
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        /* ── Status banner ────────────────────────────────────────────── */
+        .status-banner {
+            border-radius: 6px;
+            padding: 20px 24px;
+            margin: 0 0 24px 0;
+            /* background-color injected via inline style */
+        }
+        .status-banner h2 {
+            margin: 0 0 6px 0;
+            font-size: 20px;
+            color: #ffffff;
+        }
+        .status-banner p {
+            margin: 0;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.92);
+        }
+        /* ── Booking details card ─────────────────────────────────────── */
+        .booking-card {
+            background-color: #f9f9f9;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .booking-card h3 {
+            margin: 0 0 16px 0;
+            font-size: 15px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        /* ── Details table ────────────────────────────────────────────── */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .details-table tr {
+            border-bottom: 1px solid #eeeeee;
+        }
+        .details-table tr:last-child {
+            border-bottom: none;
+        }
+        .details-table td {
+            padding: 10px 4px;
+            font-size: 14px;
+            vertical-align: top;
+        }
+        .details-table td:first-child {
+            color: #888;
+            width: 38%;
+            font-weight: 500;
+        }
+        .details-table td:last-child {
+            color: #333;
+            font-weight: 600;
+        }
+        /* ── Status note block (optional) ─────────────────────────────── */
+        .status-note {
+            background-color: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin: 0 0 24px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #0b4f9a;
+            line-height: 1.7;
+        }
+        /* ── Footer ───────────────────────────────────────────────────── */
+        .footer {
+            background-color: #f5f5f5;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- ── Header ─────────────────────────────────────────────────── -->
+        <div class="header">
+            <h1>🍳 Kookaville</h1>
+            <p>Private Chef Booking Platform</p>
+        </div>
+
+        <!-- ── Main content ───────────────────────────────────────────── -->
+        <div class="content">
+
+            <p class="greeting">Hi {{recipientName}},</p>
+
+            <!-- Status banner — background colour is injected via placeholder -->
+            <div class="status-banner" style="background-color: {{statusBadgeColor}};">
+                <h2>{{statusHeadline}}</h2>
+                <p>{{statusMessage}}</p>
+            </div>
+
+            <!-- Booking details card -->
+            <div class="booking-card">
+                <h3>Booking Details</h3>
+                <table class="details-table">
+                    <tr>
+                        <td>Booking ID</td>
+                        <td>#{{bookingId}}</td>
+                    </tr>
+                    <tr>
+                        <td>Chef</td>
+                        <td>{{chefName}}</td>
+                    </tr>
+                    <tr>
+                        <td>Event Date</td>
+                        <td>{{eventDate}}</td>
+                    </tr>
+                    <tr>
+                        <td>Event Time</td>
+                        <td>{{eventTime}}</td>
+                    </tr>
+                    <tr>
+                        <td>Guests</td>
+                        <td>{{guests}}</td>
+                    </tr>
+                    <tr>
+                        <td>Location</td>
+                        <td>{{location}}</td>
+                    </tr>
+                    <tr>
+                        <td>Status</td>
+                        <td>{{statusLabel}}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Amount</td>
+                        <td>{{totalAmount}}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Optional status-specific note (injected as HTML) -->
+            {{statusNote}}
+
+            <div class="divider"></div>
+
+            <p style="font-size: 14px; color: #666;">
+                Questions? Reply to this email or visit your
+                <a href="{{frontendUrl}}/dashboard" style="color: #667eea; text-decoration: none;">dashboard</a>
+                to manage your bookings.
+            </p>
+        </div>
+
+        <!-- ── Footer ─────────────────────────────────────────────────── -->
+        <div class="footer">
+            <p style="margin: 0;">
+                Kookaville Private Chef Platform<br>
+                &copy; 2026 All rights reserved<br>
+                <a href="{{frontendUrl}}/privacy">Privacy Policy</a> |
+                <a href="{{frontendUrl}}/terms">Terms of Service</a>
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

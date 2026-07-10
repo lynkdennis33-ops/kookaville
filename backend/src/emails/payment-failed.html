@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kookaville Payment Failed</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        /* ── Header ───────────────────────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        /* ── Content ──────────────────────────────────────────────────── */
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        /* ── Failure banner ───────────────────────────────────────────── */
+        .failure-banner {
+            background-color: #ef4444;
+            border-radius: 6px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+        .failure-banner h2 {
+            margin: 0 0 6px 0;
+            font-size: 22px;
+            color: #ffffff;
+        }
+        .failure-banner p {
+            margin: 0;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.92);
+        }
+        /* ── Details card ─────────────────────────────────────────────── */
+        .details-card {
+            background-color: #f9f9f9;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .details-card h3 {
+            margin: 0 0 16px 0;
+            font-size: 15px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        /* ── Details table ────────────────────────────────────────────── */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .details-table tr {
+            border-bottom: 1px solid #eeeeee;
+        }
+        .details-table tr:last-child {
+            border-bottom: none;
+        }
+        .details-table td {
+            padding: 10px 4px;
+            font-size: 14px;
+            vertical-align: top;
+        }
+        .details-table td:first-child {
+            color: #888;
+            width: 40%;
+            font-weight: 500;
+        }
+        .details-table td:last-child {
+            color: #333;
+            font-weight: 600;
+        }
+        /* ── Retry guidance block ─────────────────────────────────────── */
+        .retry-note {
+            background-color: #fff7ed;
+            border-left: 4px solid #f59e0b;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #7c4e00;
+            line-height: 1.7;
+        }
+        .retry-note ul {
+            margin: 8px 0 0 0;
+            padding-left: 20px;
+        }
+        .retry-note li {
+            margin-bottom: 4px;
+        }
+        /* ── Footer ───────────────────────────────────────────────────── */
+        .footer {
+            background-color: #f5f5f5;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- ── Header ─────────────────────────────────────────────────── -->
+        <div class="header">
+            <h1>🍳 Kookaville</h1>
+            <p>Private Chef Booking Platform</p>
+        </div>
+
+        <!-- ── Main content ───────────────────────────────────────────── -->
+        <div class="content">
+
+            <p class="greeting">Hi {{clientName}},</p>
+
+            <!-- Failure banner -->
+            <div class="failure-banner">
+                <h2>Payment Could Not Be Completed</h2>
+                <p>We were unable to process your payment for booking #{{bookingId}}.</p>
+            </div>
+
+            <!-- Attempted payment details -->
+            <div class="details-card">
+                <h3>Payment Details</h3>
+                <table class="details-table">
+                    <tr>
+                        <td>Booking Reference</td>
+                        <td>#{{bookingId}}</td>
+                    </tr>
+                    <tr>
+                        <td>Attempted Amount</td>
+                        <td>{{amount}}</td>
+                    </tr>
+                    <tr>
+                        <td>Currency</td>
+                        <td>{{currency}}</td>
+                    </tr>
+                    <tr>
+                        <td>Status</td>
+                        <td>{{failureStatus}}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Retry guidance -->
+            <div class="retry-note">
+                <strong>What you should know:</strong>
+                <ul>
+                    <li>The payment could not be completed.</li>
+                    <li>Your booking remains pending payment — it has <strong>not</strong> been cancelled.</li>
+                    <li>You may safely retry payment from your dashboard at any time.</li>
+                </ul>
+            </div>
+
+            <div class="divider"></div>
+
+            <p style="font-size: 14px; color: #666;">
+                To retry, visit your
+                <a href="{{frontendUrl}}/dashboard" style="color: #667eea; text-decoration: none;">Kookaville dashboard</a>
+                or contact our support team at
+                <a href="mailto:{{supportEmail}}" style="color: #667eea; text-decoration: none;">{{supportEmail}}</a>
+                if you need assistance.
+            </p>
+        </div>
+
+        <!-- ── Footer ─────────────────────────────────────────────────── -->
+        <div class="footer">
+            <p style="margin: 0;">
+                Kookaville Private Chef Platform<br>
+                &copy; 2026 All rights reserved<br>
+                <a href="{{frontendUrl}}/privacy">Privacy Policy</a> |
+                <a href="{{frontendUrl}}/terms">Terms of Service</a>
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

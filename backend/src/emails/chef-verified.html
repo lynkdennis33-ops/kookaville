@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chef Account Verified — Kookaville</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        /* ── Header ───────────────────────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        /* ── Content ──────────────────────────────────────────────────── */
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        /* ── Verified banner ──────────────────────────────────────────── */
+        .verified-banner {
+            background-color: #10b981;
+            border-radius: 8px;
+            padding: 28px 24px;
+            margin-bottom: 28px;
+            text-align: center;
+        }
+        .verified-banner .icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .verified-banner h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            color: #ffffff;
+        }
+        .verified-banner p {
+            margin: 0;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.92);
+        }
+        /* ── Status badge ─────────────────────────────────────────────── */
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #10b981;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .status-label {
+            font-size: 14px;
+            color: #065f46;
+            font-weight: 500;
+        }
+        /* ── Next steps card ──────────────────────────────────────────── */
+        .next-steps {
+            background-color: #f9f9f9;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+            padding: 20px 20px;
+            margin-bottom: 28px;
+        }
+        .next-steps h3 {
+            margin: 0 0 12px 0;
+            font-size: 15px;
+            color: #667eea;
+        }
+        .next-steps ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .next-steps li {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        /* ── CTA button ───────────────────────────────────────────────── */
+        .cta-wrapper {
+            text-align: center;
+            margin: 28px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #10b981;
+            color: #ffffff;
+            padding: 14px 36px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        /* ── Footer ───────────────────────────────────────────────────── */
+        .footer {
+            background-color: #f5f5f5;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- ── Header ─────────────────────────────────────────────────── -->
+        <div class="header">
+            <h1>🍳 Kookaville</h1>
+            <p>Private Chef Booking Platform</p>
+        </div>
+
+        <!-- ── Main content ───────────────────────────────────────────── -->
+        <div class="content">
+
+            <p class="greeting">Congratulations, {{name}}! 🎉</p>
+
+            <!-- Verified banner -->
+            <div class="verified-banner">
+                <span class="icon">✅</span>
+                <h2>Your Chef Account is Verified</h2>
+                <p>Your profile has been reviewed and approved by the Kookaville team.</p>
+            </div>
+
+            <!-- Verification status -->
+            <div class="status-row">
+                <span class="status-badge">Verified</span>
+                <span class="status-label">Verification Status: <strong>Approved</strong></span>
+            </div>
+
+            <!-- What happens next -->
+            <div class="next-steps">
+                <h3>What You Can Do Now</h3>
+                <ul>
+                    <li><strong>Accept Bookings:</strong> Clients can now find and book your services.</li>
+                    <li><strong>Manage Menus:</strong> Create or update your menu offerings and pricing.</li>
+                    <li><strong>Set Availability:</strong> Configure the days and times you are available.</li>
+                    <li><strong>Track Earnings:</strong> Monitor your bookings and payouts from your dashboard.</li>
+                </ul>
+            </div>
+
+            <!-- CTA -->
+            <div class="cta-wrapper">
+                <a href="{{dashboardUrl}}" class="cta-button">View Chef Dashboard</a>
+            </div>
+
+            <div class="divider"></div>
+
+            <p style="font-size: 14px; color: #666;">
+                Questions? Reply to this email or contact us at
+                <a href="mailto:{{supportEmail}}" style="color: #667eea; text-decoration: none;">{{supportEmail}}</a>.
+            </p>
+        </div>
+
+        <!-- ── Footer ─────────────────────────────────────────────────── -->
+        <div class="footer">
+            <p style="margin: 0;">
+                Kookaville Private Chef Platform<br>
+                &copy; 2026 All rights reserved<br>
+                <a href="{{frontendUrl}}/privacy">Privacy Policy</a> |
+                <a href="{{frontendUrl}}/terms">Terms of Service</a>
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

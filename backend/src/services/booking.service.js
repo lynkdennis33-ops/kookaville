@@ -1,10 +1,38 @@
 import Booking from '../models/Booking.js';
 import Menu from '../models/Menu.js';
 import ChefProfile from '../models/ChefProfile.js';
+import User from '../models/User.js';
 import notificationService from './notification.service.js';
 import paymentService from './payment.service.js';
+import emailService from './email.service.js';
 
 class BookingService {
+  /**
+   * Build the bookingData object used by every email send.
+   * WHY helper: Centralises date formatting and total calculation so each
+   * email call site stays concise.
+   * @param {Object} booking     - Mongoose booking document
+   * @param {Object} menu        - Populated menu document (must have .price)
+   * @param {string} chefName    - Chef's display name (full name)
+   * @param {string} clientName  - Client's display name (full name)
+   * @returns {Object} bookingData ready to pass to emailService methods
+   * @private
+   */
+  _buildBookingEmailData(booking, menu, chefName, clientName) {
+    return {
+      bookingId:   booking._id.toString().slice(-8).toUpperCase(),
+      chefName:    chefName   || 'Your Chef',
+      clientName:  clientName || 'Your Client',
+      eventDate:   new Date(booking.bookingDate).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      }),
+      eventTime:   booking.eventTime,
+      guests:      booking.guests,
+      location:    'Not specified',            // Booking schema has no location field
+      totalAmount: `$${(menu.price * booking.guests).toFixed(2)}`,
+    };
+  }
+
   /**
    * Create a new booking for a client
    * Reads chef from the menu - client must NOT provide chef ID
@@ -104,6 +132,57 @@ class BookingService {
       referenceId: booking._id,
       referenceModel: 'Booking',
     });
+
+    // Send confirmation emails to both client and chef.
+    // WHY separate User queries: createBooking doesn't populate the booking —
+    // we use the already-available userId and chefProfile.user to fetch only
+    // the fields we need for emails, keeping the critical path clean.
+    // WHY try/catch: email failures must never roll back the booking operation.
+    try {
+      const [clientUser, chefUser] = await Promise.all([
+        User.findById(userId).select('firstName lastName email'),
+        User.findById(chefProfile.user).select('firstName lastName email'),
+      ]);
+
+      const bookingData = this._buildBookingEmailData(
+        booking,
+        menu,
+        chefUser  ? `${chefUser.firstName} ${chefUser.lastName}`   : 'Your Chef',
+        clientUser ? `${clientUser.firstName} ${clientUser.lastName}` : 'Your Client'
+      );
+
+      // Email the client (booking-submitted confirmation)
+      if (clientUser?.email) {
+        await emailService.sendBookingCreatedEmail(
+          clientUser.email,
+          clientUser.firstName,
+          bookingData,
+          'client'
+        );
+      }
+
+      // Email the chef using the dedicated booking-request template (Phase 15E).
+      // WHY sendBookingRequestEmail instead of sendBookingCreatedEmail for chef:
+      //   The booking-request template is chef-specific and richer — it includes
+      //   guest count, amount, and a direct "View Booking" link to the chef portal.
+      if (chefUser?.email) {
+        await emailService.sendBookingRequestEmail(
+          chefUser.email,
+          chefUser.firstName,
+          {
+            clientName: bookingData.clientName,
+            bookingId:  bookingData.bookingId,
+            eventDate:  bookingData.eventDate,
+            eventTime:  bookingData.eventTime,
+            location:   bookingData.location,
+            guestCount: booking.guests,
+            amount:     bookingData.totalAmount,
+          }
+        );
+      }
+    } catch (emailErr) {
+      console.error('[BookingService] Booking created emails failed:', emailErr.message);
+    }
 
     return booking;
   }
@@ -282,14 +361,17 @@ class BookingService {
     await booking.save({ validateBeforeSave: true });
 
     // Return populated booking
+    // WHY email is included in selects: email addresses are needed for
+    // status-change notification emails sent below.
     const updatedBooking = await Booking.findById(booking._id)
-      .populate('client', 'firstName lastName')
+      .populate('client', 'firstName lastName email')
       .populate({
         path: 'chef',
-        populate: { path: 'user', select: 'firstName lastName' },
+        populate: { path: 'user', select: 'firstName lastName email' },
       })
       .populate('menu', 'name price');
 
+    // ── In-app notifications ──────────────────────────────────────────
     // Send notification to the relevant party based on the new status.
     // accepted / rejected / completed → notify the client
     // cancelled (client action)       → notify the chef
@@ -344,6 +426,63 @@ class BookingService {
         referenceId: updatedBooking._id,
         referenceModel: 'Booking',
       });
+    }
+
+    // ── Status-change emails ──────────────────────────────────────────
+    // Emails are sent after notifications and AFTER the DB update is committed.
+    // WHY try/catch per send: email failures must not affect the booking response.
+    //
+    // Rules:
+    //   accepted  → email client only
+    //   rejected  → email client only
+    //   cancelled → email chef (cancelled by client — enforced by role rules above)
+    //   completed → no booking email (separate review-prompt email in future phase)
+    const chefName   = updatedBooking.chef?.user
+      ? `${updatedBooking.chef.user.firstName} ${updatedBooking.chef.user.lastName}`
+      : 'Your Chef';
+    const clientName = updatedBooking.client
+      ? `${updatedBooking.client.firstName} ${updatedBooking.client.lastName}`
+      : 'Your Client';
+
+    const bookingData = this._buildBookingEmailData(
+      updatedBooking,
+      updatedBooking.menu,
+      chefName,
+      clientName
+    );
+
+    if (status === 'accepted') {
+      try {
+        await emailService.sendBookingAcceptedEmail(
+          updatedBooking.client.email,
+          updatedBooking.client.firstName,
+          bookingData
+        );
+      } catch (emailErr) {
+        console.error('[BookingService] Booking accepted email failed:', emailErr.message);
+      }
+    } else if (status === 'rejected') {
+      try {
+        await emailService.sendBookingRejectedEmail(
+          updatedBooking.client.email,
+          updatedBooking.client.firstName,
+          bookingData
+        );
+      } catch (emailErr) {
+        console.error('[BookingService] Booking rejected email failed:', emailErr.message);
+      }
+    } else if (status === 'cancelled') {
+      // Only clients can cancel (enforced above); notify the chef.
+      try {
+        await emailService.sendBookingCancelledEmail(
+          updatedBooking.chef.user.email,
+          updatedBooking.chef.user.firstName,
+          bookingData,
+          'client'   // cancelledBy — controls the message wording in the template
+        );
+      } catch (emailErr) {
+        console.error('[BookingService] Booking cancelled email failed:', emailErr.message);
+      }
     }
 
     return updatedBooking;

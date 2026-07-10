@@ -5,6 +5,7 @@ import Transaction from '../models/Transaction.js';
 import Notification from '../models/Notification.js';
 import Category from '../models/Category.js';
 import Menu from '../models/Menu.js';
+import emailService from './email.service.js';
 
 /**
  * Admin Dashboard Service
@@ -588,8 +589,8 @@ class AdminService {
    */
   async verifyChef(chefId, adminId) {
     try {
-      // Find the chef profile
-      const chef = await ChefProfile.findById(chefId).populate('user', 'email');
+      // Find the chef profile — include firstName for the verification email greeting
+      const chef = await ChefProfile.findById(chefId).populate('user', 'firstName email');
       if (!chef) {
         throw new Error('Chef profile not found');
       }
@@ -608,14 +609,32 @@ class AdminService {
       // Save updated chef profile
       await chef.save();
 
-      // Create notification for the verified chef
-      // WHY notification: Chefs deserve to know they've been verified and can accept bookings
+      // Create in-app notification for the verified chef.
+      // WHY notification before email: The notification is written to the DB
+      // as part of the same service call.  If SMTP fails, the chef is still
+      // informed via their dashboard.  This matches the
+      // DB update → notification → email pipeline in the architecture spec.
       await Notification.create({
         recipient: chef.user._id,
         title: 'Chef Account Verified',
         message: 'Congratulations!\n\nYour chef account has been verified.\n\nYou may now receive bookings.',
         type: 'system'
       });
+
+      // Send chef-verified email.
+      // WHY try/catch: email failures must never roll back the verification
+      // decision or return an error to the admin.
+      try {
+        await emailService.sendChefVerifiedEmail(
+          chef.user.email,
+          chef.user.firstName
+        );
+      } catch (emailErr) {
+        console.error(
+          `[AdminService] Chef verified email failed for chef ${chefId}:`,
+          emailErr.message
+        );
+      }
 
       return chef.toObject();
     } catch (error) {
@@ -642,8 +661,8 @@ class AdminService {
         throw new Error('Rejection reason is required');
       }
 
-      // Find the chef profile
-      const chef = await ChefProfile.findById(chefId).populate('user', 'email');
+      // Find the chef profile — include firstName for the rejection email greeting
+      const chef = await ChefProfile.findById(chefId).populate('user', 'firstName email');
       if (!chef) {
         throw new Error('Chef profile not found');
       }
@@ -662,15 +681,31 @@ class AdminService {
       // Save updated chef profile
       await chef.save();
 
-      // Create notification for the rejected chef
-      // WHY notification: Chefs need to know their application was rejected and why
-      // This enables them to address the issue and resubmit
+      // Create in-app notification for the rejected chef.
+      // WHY notification before email: Same reasoning as verifyChef — the
+      // in-app record is the reliable source; email is supplementary.
       await Notification.create({
         recipient: chef.user._id,
         title: 'Chef Verification Rejected',
         message: `Your verification request has been rejected.\n\nReason: ${reason}`,
         type: 'system'
       });
+
+      // Send chef-rejected email.
+      // WHY try/catch: email failures must never roll back the rejection
+      // decision or return an error to the admin.
+      try {
+        await emailService.sendChefRejectedEmail(
+          chef.user.email,
+          chef.user.firstName,
+          reason
+        );
+      } catch (emailErr) {
+        console.error(
+          `[AdminService] Chef rejected email failed for chef ${chefId}:`,
+          emailErr.message
+        );
+      }
 
       return chef.toObject();
     } catch (error) {
