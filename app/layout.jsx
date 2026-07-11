@@ -8,7 +8,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata = {
-  title: "Lumière - Private Chef Booking Platform",
+  title: "Kookaville - Private Chef Booking Platform",
   description:
     "Curated private dining experiences crafted by world-class chefs, delivered to your home.",
 };

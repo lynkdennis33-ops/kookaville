@@ -27,7 +27,7 @@ export function Sidebar({ items, role }) {
             <ChefHat className="h-5 w-5" />
           </div>
           <span className="font-bold text-xl tracking-tight text-primary">
-            Lumière{" "}
+            Kookaville{" "}
             <span className="text-sm font-normal text-muted-foreground ml-1 capitalize">
               {role}
             </span>

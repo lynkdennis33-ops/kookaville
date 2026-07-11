@@ -13,7 +13,7 @@ export function Footer() {
                 <ChefHat className="h-5 w-5" />
               </div>
               <span className="font-bold text-xl tracking-tight text-white">
-                Lumière
+                Kookaville
               </span>
             </Link>
             <p className="text-sm text-primary-foreground/70 mb-6 leading-relaxed">
@@ -165,7 +165,7 @@ export function Footer() {
 
         <div className="border-t border-primary-foreground/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/50">
-            &copy; {new Date().getFullYear()} Lumière Private Chefs. All rights
+            &copy; {new Date().getFullYear()} Kookaville Private Chefs. All rights
             reserved.
           </p>
           <div className="flex gap-4">

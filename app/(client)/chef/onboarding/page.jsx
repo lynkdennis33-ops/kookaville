@@ -35,7 +35,7 @@ export default function ChefOnboardingPage() {
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
-          Become a Lumière Chef
+          Become a Kookaville Chef
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Join our exclusive network of top-tier private chefs and culinary
@@ -152,7 +152,7 @@ export default function ChefOnboardingPage() {
               <div className="bg-secondary/50 border border-secondary rounded-xl p-4 flex gap-4">
                 <BadgeCheck className="h-6 w-6 text-primary shrink-0" />
                 <p className="text-sm text-foreground/80 leading-relaxed">
-                  Lumière requires all chefs to hold a valid Food Handler's
+                  Kookaville requires all chefs to hold a valid Food Handler's
                   License and undergo a background check.
                 </p>
               </div>

@@ -290,8 +290,8 @@ export default function BookingFlowPage() {
                   <div className="pt-6 border-t border-border max-w-xl">
                     <p className="text-xs text-muted-foreground mb-4">
                       By selecting the button below, I agree to the Host's House
-                      Rules, Ground rules for guests, Lumière's Rebooking and
-                      Refund Policy, and that Lumière can charge my payment
+                      Rules, Ground rules for guests, Kookaville's Rebooking and
+                      Refund Policy, and that Kookaville can charge my payment
                       method.
                     </p>
                     <Button
@@ -367,7 +367,7 @@ export default function BookingFlowPage() {
           <div className="flex items-center gap-4 bg-secondary/50 p-6 rounded-xl border border-secondary">
             <ShieldCheck className="w-8 h-8 text-emerald-600 flex-shrink-0" />
             <p className="text-sm font-medium">
-              Payment is held securely by Lumière and only released to the chef
+              Payment is held securely by Kookaville and only released to the chef
               24h after your event.
             </p>
           </div>

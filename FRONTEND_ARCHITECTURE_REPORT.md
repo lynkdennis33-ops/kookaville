@@ -1,6 +1,6 @@
-# LUMIÈRE PRIVATE CHEF PLATFORM - FRONTEND ARCHITECTURE REPORT
+# Kookaville PRIVATE CHEF PLATFORM - FRONTEND ARCHITECTURE REPORT
 
-**Project Name:** Lumière  
+**Project Name:** Kookaville  
 **Type:** Private Chef Booking Platform  
 **Report Date:** June 7, 2026  
 **Status:** Frontend MVP - Mocked Data Implementation
@@ -10,7 +10,7 @@
 ## 1. Project Overview
 
 ### What is this application?
-Lumière is a **private chef booking platform** that connects high-end chefs with customers seeking curated dining experiences. The platform enables users to browse, discover, and book world-class private chefs for events, celebrations, and everyday dining at home.
+Kookaville is a **private chef booking platform** that connects high-end chefs with customers seeking curated dining experiences. The platform enables users to browse, discover, and book world-class private chefs for events, celebrations, and everyday dining at home.
 
 ### What problem does it solve?
 - **For Customers:** Eliminates the hassle of hiring caterers or restaurant-quality dining by providing vetted, premium private chefs

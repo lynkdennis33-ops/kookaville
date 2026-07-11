@@ -80,7 +80,7 @@ export function Navbar() {
                   "font-bold text-xl tracking-tight transition-colors text-primary",
                 )}
               >
-                Lumière
+                Kookaville
               </span>
             </Link>
           </div>

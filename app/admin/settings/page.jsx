@@ -29,7 +29,7 @@ export default function AdminSettingsPage() {
               <CardTitle className="flex items-center gap-2">
                 <Globe className="h-5 w-5" /> Platform Configuration
               </CardTitle>
-              <CardDescription>Global settings for Lumière.</CardDescription>
+              <CardDescription>Global settings for Kookaville.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

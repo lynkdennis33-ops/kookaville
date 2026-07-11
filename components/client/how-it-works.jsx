@@ -35,7 +35,7 @@ export function HowItWorks() {
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <h2 className="text-3xl font-bold font-serif tracking-tight text-foreground sm:text-5xl mb-6">
-          The Lumière Experience
+          The Kookaville Experience
         </h2>
         <p className="text-muted-foreground font-serif max-w-2xl mx-auto mb-20 text-xl font-light">
           A seamless journey from discovering local culinary talent to indulging

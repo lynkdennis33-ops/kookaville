@@ -26,7 +26,7 @@ export default function SignupPage() {
         Create an account
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Join Lumière to discover exceptional dining experiences
+        Join Kookaville to discover exceptional dining experiences
       </p>
 
       <div className="mt-8">
