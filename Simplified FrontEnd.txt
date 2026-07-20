@@ -1,0 +1,83 @@
+Kookaville/                         ← monorepo root (frontend + backend)
+├── app/                            ← Next.js App Router root
+│   ├── layout.jsx                  ← Root layout (fonts, metadata)
+│   ├── globals.css                 ← Tailwind v4 + CSS design tokens
+│   │
+│   ├── (auth)/                     ← Route group — no URL segment
+│   │   ├── layout.jsx              ← Split-screen auth layout
+│   │   ├── login/page.jsx
+│   │   ├── signup/page.jsx
+│   │   ├── forgot-password/page.jsx
+│   │   └── verify/page.jsx         ← OTP 6-digit input
+│   │
+│   ├── (client)/                   ← Route group — public & client pages
+│   │   ├── layout.jsx              ← Navbar + Footer wrapper
+│   │   ├── page.jsx                ← Landing page (/)
+│   │   ├── search/page.jsx         ← Chef search + filters
+│   │   ├── chef/
+│   │   │   ├── [id]/page.jsx       ← Chef public profile
+│   │   │   └── onboarding/page.jsx ← Chef registration flow
+│   │   ├── book/[id]/page.jsx      ← 3-step booking flow
+│   │   └── dashboard/
+│   │       ├── layout.jsx          ← Sidebar nav layout
+│   │       ├── page.jsx            ← Overview (upcoming bookings)
+│   │       ├── bookings/page.jsx
+│   │       ├── messages/page.jsx
+│   │       ├── payments/page.jsx
+│   │       ├── saved/page.jsx
+│   │       └── settings/page.jsx
+│   │
+│   ├── chef-portal/                ← Chef dashboard (no route group)
+│   │   ├── layout.jsx              ← Sidebar layout (shared Sidebar component)
+│   │   ├── dashboard/page.jsx
+│   │   ├── bookings/page.jsx       ← Calendar + time slots
+│   │   ├── menus/page.jsx          ← CRUD menu items (UI only)
+│   │   ├── earnings/page.jsx
+│   │   └── settings/page.jsx
+│   │
+│   └── admin/                      ← Admin panel (no route group)
+│       ├── layout.jsx              ← Sidebar layout (shared Sidebar component)
+│       ├── dashboard/page.jsx
+│       ├── users/page.jsx
+│       ├── chefs/page.jsx          ← Approve/reject pending chefs
+│       ├── bookings/page.jsx
+│       └── settings/page.jsx
+│
+├── components/
+│   ├── ui/                         ← Base design system components
+│   │   ├── button.jsx              ← Polymorphic, supports isLoading, asChild
+│   │   ├── input.jsx               ← leftIcon/rightIcon, error state
+│   │   ├── card.jsx                ← Card, CardHeader, CardTitle, etc.
+│   │   ├── modal.jsx               ← Framer Motion modal with Esc + backdrop
+│   │   ├── badge.jsx
+│   │   ├── calendar.jsx            ← react-day-picker wrapper
+│   │   ├── checkbox.jsx
+│   │   ├── select.jsx
+│   │   ├── stepper.jsx
+│   │   ├── textarea.jsx
+│   │   ├── chef-card.jsx           ← Chef listing card
+│   │   └── rating-stars.jsx
+│   │
+│   ├── client/                     ← Landing page sections
+│   │   ├── hero-search.jsx         ← Full-screen hero with search bar
+│   │   ├── featured-chefs.jsx      ← Grid from mocks/data.js
+│   │   ├── categories.jsx          ← Grid from mocks/data.js
+│   │   └── how-it-works.jsx        ← 4-step explainer
+│   │
+│   └── shared/                     ← Layout chrome
+│       ├── navbar.jsx              ← Fixed top nav, mobile menu, user dropdown
+│       ├── sidebar.jsx             ← Left sidebar used by admin + chef-portal
+│       └── footer.jsx
+│
+├── lib/
+│   └── utils.js                    ← Only: cn() = clsx + tailwind-merge
+│
+├── mocks/
+│   └── data.js                     ← All app data: chefs, categories, bookings, reviews
+│
+├── public/                         ← Static assets (no images checked in)
+├── package.json
+├── next.config.mjs                 ← Empty (no configuration)
+├── jsconfig.json                   ← Path alias: @/* → ./*
+├── postcss.config.mjs
+└── eslint.config.mjs
