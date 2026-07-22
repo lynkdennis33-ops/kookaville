@@ -1,5 +1,6 @@
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const playfair = Playfair_Display({
@@ -19,7 +20,10 @@ export default function RootLayout({ children }) {
       <body
         className={`${inter.variable} ${playfair.variable} antialiased min-h-screen flex flex-col`}
       >
-        {children}
+        {/* AuthProvider wraps the entire tree so useAuth() works in any client component. */}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
