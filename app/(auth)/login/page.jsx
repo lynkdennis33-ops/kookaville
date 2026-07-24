@@ -2,24 +2,53 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, AlertCircle } from "lucide-react";
+import { login as loginService } from "@/services/auth.service";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
-    // Mock login delay then redirect to verify
-    setTimeout(() => {
+
+    const form = e.currentTarget;
+    const email = form.email.value.trim();
+    const password = form.password.value;   
+
+    try {
+      const user = await loginService({ email, password });
+      login(user);
+
+      // Redirect to the originally requested page, or to the role dashboard
+      const from = searchParams.get("from");
+      if (from && from.startsWith("/")) {
+        router.replace(from);
+      } else if (user.role === "chef") {
+        router.replace("/chef-portal/dashboard");
+      } else if (user.role === "admin") {
+        router.replace("/admin/dashboard");
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        "Invalid email or password. Please try again.";
+      setError(message);
+    } finally {
       setIsLoading(false);
-      router.push("/verify");
-    }, 1500);
+    }
   };
 
   return (
@@ -60,7 +89,7 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </Button>
-          <Button
+          {/* <Button
             variant="outline"
             className="w-full text-foreground hover:bg-secondary"
           >
@@ -73,7 +102,7 @@ export default function LoginPage() {
               <path d="M12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
             </svg>
             Continue with Apple
-          </Button>
+          </Button> */}
         </div>
 
         <div className="relative mt-8">
@@ -89,6 +118,12 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-8">
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <div>
             <label
               htmlFor="email"
@@ -135,7 +170,7 @@ export default function LoginPage() {
             <div className="text-sm leading-6">
               <Link
                 href="/forgot-password"
-                className="font-semibold text-primary hover:text-primary/80"
+                className="font-semibold text-otherPrimary hover:text-otherPrimary/80"
               >
                 Forgot password?
               </Link>

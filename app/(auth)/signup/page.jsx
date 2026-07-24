@@ -5,19 +5,40 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Mail, Lock } from "lucide-react";
+import { User, Mail, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { signup as signupService } from "@/services/auth.service";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
-    setTimeout(() => {
+
+    const form = e.currentTarget;
+    const firstName = form.firstName.value.trim();
+    const lastName = form.lastName.value.trim();
+    const email = form.email.value.trim();
+    const password = form.password.value;
+
+    try {
+      const user = await signupService({ firstName, lastName, email, password });
+      login(user);
+      // New users are always clients — send them to their dashboard
+      router.replace("/dashboard");
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        "Something went wrong. Please try again.";
+      setError(message);
+    } finally {
       setIsLoading(false);
-      router.push("/verify");
-    }, 1500);
+    }
   };
 
   return (
@@ -31,6 +52,12 @@ export default function SignupPage() {
 
       <div className="mt-8">
         <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label

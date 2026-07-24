@@ -53,11 +53,24 @@ class EmailService {
     if (!smtpPass) missingVars.push('SMTP_PASS');
     if (!emailFrom) missingVars.push('EMAIL_FROM');
 
+    // For production, throw an error if any required env vars are missing
+    // if (missingVars.length > 0) {
+    //   const errorMsg = `Missing required email configuration: ${missingVars.join(', ')}. Please set these environment variables.`;
+    //   console.error(`❌ EmailService: ${errorMsg}`);
+    //   throw new Error(errorMsg);
+    // }
+
+    //For development, we can log a warning instead of throwing an error to allow the app to run without email functionality.
     if (missingVars.length > 0) {
-      const errorMsg = `Missing required email configuration: ${missingVars.join(', ')}. Please set these environment variables.`;
-      console.error(`❌ EmailService: ${errorMsg}`);
-      throw new Error(errorMsg);
-    }
+  console.warn(
+    `⚠️ EmailService disabled. Missing configuration: ${missingVars.join(", ")}`
+  );
+
+  this.transporter = null;
+  this.emailFrom = null;
+
+  return;
+}
 
     // Create Nodemailer transporter
     // WHY reuse single transporter: SMTP connection pooling improves performance

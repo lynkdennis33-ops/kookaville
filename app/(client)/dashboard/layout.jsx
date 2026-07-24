@@ -12,9 +12,12 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import { RequireAuth } from "@/components/shared/require-auth";
 
 export default function ClientDashboardLayout({ children }) {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   const tabs = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -26,6 +29,7 @@ export default function ClientDashboardLayout({ children }) {
   ];
 
   return (
+    <RequireAuth>
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12 w-full">
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar Navigation */}
@@ -33,11 +37,15 @@ export default function ClientDashboardLayout({ children }) {
           <div className="sticky top-24">
             <div className="flex items-center gap-4 mb-8 px-2">
               <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold font-serif">
-                J
+                {user?.firstName?.[0]?.toUpperCase() ?? "U"}
               </div>
               <div>
-                <h2 className="font-bold text-lg leading-tight">James C.</h2>
-                <p className="text-sm text-muted-foreground">Joined 2026</p>
+                <h2 className="font-bold text-lg leading-tight">
+                  {user ? `${user.firstName} ${user.lastName[0]}.` : ""}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Joined {new Date(user?.createdAt ?? Date.now()).getFullYear()}
+                </p>
               </div>
             </div>
 
@@ -73,5 +81,6 @@ export default function ClientDashboardLayout({ children }) {
         <main className="flex-1 min-w-0">{children}</main>
       </div>
     </div>
+    </RequireAuth>
   );
 }

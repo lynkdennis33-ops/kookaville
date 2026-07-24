@@ -2,21 +2,23 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, ChefHat, User, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const router = useRouter();
 
-  // Mock auth state — replace with real session when auth is wired up
-  const isLoggedIn = true;
-  const userType = "client"; // 'client' | 'chef' | 'admin'
+  const { user, isAuthenticated, logout } = useAuth();
+  const isLoggedIn = isAuthenticated;
+  const userType = user?.role ?? "client";
 
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -179,7 +181,11 @@ export function Navbar() {
                           Account Settings
                         </Link>
                         <button
-                          onClick={() => setUserDropdownOpen(false)}
+                          onClick={async () => {
+                            setUserDropdownOpen(false);
+                            await logout();
+                            router.push("/login");
+                          }}
                           className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-medium flex items-center gap-2"
                         >
                           <LogOut className="h-4 w-4" />
@@ -268,7 +274,13 @@ export function Navbar() {
                   >
                     Settings
                   </Link>
-                  <button className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-500 hover:bg-red-50 mt-4">
+                  <button
+                    onClick={async () => {
+                      await logout();
+                      router.push("/login");
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-500 hover:bg-red-50 mt-4"
+                  >
                     Log out
                   </button>
                 </div>

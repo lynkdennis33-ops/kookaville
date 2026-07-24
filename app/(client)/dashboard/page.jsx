@@ -1,3 +1,4 @@
+'use client';
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -10,15 +11,17 @@ import {
 } from "@/components/ui/card";
 import { clientBookings, chefs } from "@/mocks/data";
 import { Calendar, MapPin, Search } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ClientDashboardOverview() {
   const upcoming = clientBookings.filter((b) => b.status === "upcoming");
+  const { user } = useAuth();
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Welcome back, James
+          Welcome back, {user?.firstName ?? "User"}
         </h1>
         <p className="text-muted-foreground">
           Manage your reservations and connect with chefs.

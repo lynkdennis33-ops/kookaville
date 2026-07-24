@@ -2,44 +2,28 @@ import { NextResponse } from "next/server";
 
 /**
  * Next.js 16.2 Proxy — runs at the edge before every matched request is served.
- * (Previously called "middleware" — renamed to "proxy" in Next.js 16.2.)
  *
- * Responsibility: Protect authenticated routes.
+ * Responsibility: Redirect unauthenticated users away from protected routes.
  *
- * Current state (Phase A — Foundation):
- *   Passes all requests through. No authentication check is performed yet.
- *   The matcher config below is already scoped to protected routes so
- *   Phase B only needs to add verification logic inside the function body.
+ * Strategy: checks for the presence of the JWT token cookie set by lib/token.js
+ * after a successful login. The cookie is not HttpOnly (the backend uses Bearer
+ * tokens, not cookie-based auth), so this check is a first-line redirect — the
+ * backend itself validates the token on every protected API call.
  *
- * TODO Phase B — JWT Verification:
- *
- *   1. Read the HTTP-only JWT cookie the backend sets on login:
- *        const token = request.cookies.get("token")?.value;
- *
- *   2. Verify using `jose` (edge-compatible; jsonwebtoken requires Node.js crypto):
- *        import { jwtVerify } from "jose";
- *        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
- *        try {
- *          const { payload } = await jwtVerify(token, secret);
- *        } catch {
- *          return NextResponse.redirect(new URL("/login", request.url));
- *        }
- *
- *   3. Redirect unauthenticated users:
- *        if (!token) {
- *          return NextResponse.redirect(new URL("/login", request.url));
- *        }
- *
- *   4. (Optional) Forward the decoded role to Server Components via header:
- *        const response = NextResponse.next();
- *        response.headers.set("x-user-role", payload.role);
- *        return response;
- *
- *   5. Add JWT_SECRET to .env.local (server-only, no NEXT_PUBLIC_ prefix).
- *   6. Run: npm install jose
+ * TODO: Install `jose` and add jwtVerify() here to prevent forged cookies from
+ * bypassing the edge redirect. Ensure JWT_SECRET in .env.local matches the
+ * backend's JWT_SECRET value.
  */
 export function proxy(request) {
-  // TODO Phase B: Replace this passthrough with JWT verification (see above).
+  const token = request.cookies.get("token")?.value;
+
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    // Preserve the intended destination so the login page can redirect there
+    loginUrl.searchParams.set("from", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   return NextResponse.next();
 }
 

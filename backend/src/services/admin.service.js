@@ -587,61 +587,72 @@ class AdminService {
    * @param {string} adminId - ID of admin performing verification
    * @returns {Object} Verified chef profile data
    */
-  async verifyChef(chefId, adminId) {
-    try {
-      // Find the chef profile — include firstName for the verification email greeting
-      const chef = await ChefProfile.findById(chefId).populate('user', 'firstName email');
-      if (!chef) {
-        throw new Error('Chef profile not found');
-      }
+async verifyChef(chefId, adminId) {
+  try {
+    // Find the chef profile — include firstName for the verification email greeting
+    const chef = await ChefProfile.findById(chefId).populate(
+      'user',
+      'firstName email role'
+    );
 
-      // Reject if already approved
-      if (chef.verificationStatus === 'approved') {
-        throw new Error('Chef is already verified');
-      }
-
-      // Update verification status and audit fields
-      chef.verificationStatus = 'approved';
-      chef.verifiedBy = adminId;
-      chef.verifiedAt = new Date();
-      chef.verificationNotes = ''; // Clear notes on approval
-
-      // Save updated chef profile
-      await chef.save();
-
-      // Create in-app notification for the verified chef.
-      // WHY notification before email: The notification is written to the DB
-      // as part of the same service call.  If SMTP fails, the chef is still
-      // informed via their dashboard.  This matches the
-      // DB update → notification → email pipeline in the architecture spec.
-      await Notification.create({
-        recipient: chef.user._id,
-        title: 'Chef Account Verified',
-        message: 'Congratulations!\n\nYour chef account has been verified.\n\nYou may now receive bookings.',
-        type: 'system'
-      });
-
-      // Send chef-verified email.
-      // WHY try/catch: email failures must never roll back the verification
-      // decision or return an error to the admin.
-      try {
-        await emailService.sendChefVerifiedEmail(
-          chef.user.email,
-          chef.user.firstName
-        );
-      } catch (emailErr) {
-        console.error(
-          `[AdminService] Chef verified email failed for chef ${chefId}:`,
-          emailErr.message
-        );
-      }
-
-      return chef.toObject();
-    } catch (error) {
-      throw new Error(`Failed to verify chef: ${error.message}`);
+    if (!chef) {
+      throw new Error('Chef profile not found');
     }
-  }
 
+    // Reject if already approved
+    if (chef.verificationStatus === 'approved') {
+      throw new Error('Chef is already verified');
+    }
+
+    // Update verification status and audit fields
+    chef.verificationStatus = 'approved';
+    chef.verifiedBy = adminId;
+    chef.verifiedAt = new Date();
+    chef.verificationNotes = '';
+
+    // Save updated chef profile
+    await chef.save();
+
+    // ==========================================================
+    // NEW: Promote the associated user to the Chef role
+    // ==========================================================
+    await User.findByIdAndUpdate(
+      chef.user._id,
+      {
+        role: 'chef',
+      },
+      {
+        new: true,
+      }
+    );
+
+    // Create notification
+    await Notification.create({
+      recipient: chef.user._id,
+      title: 'Chef Account Verified',
+      message:
+        'Congratulations!\n\nYour chef account has been verified.\n\nYou may now receive bookings.',
+      type: 'system',
+    });
+
+    // Send chef-verified email
+    try {
+      await emailService.sendChefVerifiedEmail(
+        chef.user.email,
+        chef.user.firstName
+      );
+    } catch (emailErr) {
+      console.error(
+        `[AdminService] Chef verified email failed for chef ${chefId}:`,
+        emailErr.message
+      );
+    }
+
+    return chef.toObject();
+  } catch (error) {
+    throw new Error(`Failed to verify chef: ${error.message}`);
+  }
+}
   /**
    * Reject a chef verification
    * Sets verificationStatus to "rejected" and records audit information with reason.

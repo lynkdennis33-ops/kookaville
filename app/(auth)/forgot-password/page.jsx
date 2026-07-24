@@ -4,19 +4,27 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import { forgotPassword } from "@/services/auth.service";
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    const email = e.currentTarget.email.value.trim();
+    try {
+      await forgotPassword(email);
       setIsSent(true);
-    }, 1200);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSent) {
@@ -58,6 +66,12 @@ export default function ForgotPasswordPage() {
 
       <div className="mt-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <div>
             <label
               htmlFor="email"
