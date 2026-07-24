@@ -37,11 +37,12 @@ class ReviewController {
   async getChefReviews(req, res, next) {
     try {
       const { chefId } = req.params;
-      const reviews = await reviewService.getChefReviews(chefId);
+      const { page, limit } = req.query;
+      const result = await reviewService.getChefReviews(chefId, { page, limit });
 
       res.status(200).json({
         success: true,
-        data: { reviews },
+        data: result,
       });
     } catch (error) {
       next(error);

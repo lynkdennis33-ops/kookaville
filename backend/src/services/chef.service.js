@@ -179,16 +179,24 @@ class ChefService {
 
   /**
    * Search and filter approved chefs
-   * Supports keyword search and multiple filters
+   * Supports keyword search, multiple filters, and pagination
    * Query parameters:
    * - keyword: search in bio, specialties, cuisines (case-insensitive)
    * - cuisine: filter by cuisine (exact match in array)
    * - serviceArea: filter by service area (exact match in array)
+   * - dietary: filter by dietary option (exact match in dietaryOptions array)
    * - minPrice: minimum price per person
    * - maxPrice: maximum price per person
+   * - minRating: minimum average rating (inclusive)
+   * - page: page number (default: 1)
+   * - limit: items per page (default: 10, max: 100)
    */
   async searchChefs(filters) {
-    const { keyword, cuisine, serviceArea, minPrice, maxPrice } = filters;
+    const { keyword, cuisine, serviceArea, dietary, minPrice, maxPrice, minRating, page, limit } = filters;
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Math.min(100, Number(limit) || 10));
+    const skip = (pageNum - 1) * limitNum;
 
     // Build MongoDB query
     const query = { verificationStatus: 'approved' };
@@ -212,6 +220,16 @@ class ChefService {
       query.serviceAreas = serviceArea.trim();
     }
 
+    // Filter by dietary option (exact match in dietaryOptions array)
+    if (dietary && dietary.trim()) {
+      query.dietaryOptions = dietary.trim();
+    }
+
+    // Filter by minimum rating (chef average rating >= minRating)
+    if (minRating) {
+      query.rating = { $gte: Number(minRating) };
+    }
+
     // Filter by price range
     const priceFilter = {};
     if (minPrice) {
@@ -225,12 +243,27 @@ class ChefService {
       query.pricePerPerson = priceFilter;
     }
 
-    // Execute query
+    // Get total count for pagination metadata
+    const totalItems = await ChefProfile.countDocuments(query);
+    const totalPages = Math.ceil(totalItems / limitNum);
+
+    // Execute paginated query
     const chefs = await ChefProfile.find(query)
       .populate('user', 'firstName lastName avatar')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
 
-    return chefs;
+    return {
+      chefs,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalItems,
+        hasNextPage: pageNum < totalPages,
+        hasPreviousPage: pageNum > 1,
+      },
+    };
   }
 
   /**

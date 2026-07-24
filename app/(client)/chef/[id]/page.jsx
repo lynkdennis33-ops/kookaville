@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   Star,
   Share,
@@ -18,14 +19,67 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { RatingStars } from "@/components/ui/rating-stars";
-import { chefs, reviews } from "@/mocks/data";
+import { Loading } from "@/components/shared/loading";
+import { getChefById } from "@/services/chef.service";
+import { getChefReviews } from "@/services/review.service";
 
 export default function ChefProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const [date, setDate] = useState(new Date());
-  // Find chef in mock data
-  const chef = chefs.find((c) => c.id === id) || chefs[0];
+  const [reviewPage, setReviewPage] = useState(1);
+
+  const {
+    data: chef,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["chef", id],
+    queryFn: () => getChefById(id),
+    enabled: Boolean(id),
+  });
+
+  const {
+    data: reviewsData,
+    isLoading: reviewsLoading,
+    isError: reviewsError,
+  } = useQuery({
+    queryKey: ["reviews", "chef", id, reviewPage],
+    queryFn: () => getChefReviews(id, { page: reviewPage, limit: 5 }),
+    enabled: Boolean(id) && !isLoading && !isError,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-center py-32">
+          <Loading size="lg" text="Loading chef profile..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-32">
+          <p className="text-muted-foreground text-lg">
+            {error?.response?.status === 404
+              ? "Chef not found."
+              : "Unable to load chef profile. Please try again later."}
+          </p>
+          <Button
+            variant="outline"
+            className="mt-6"
+            onClick={() => router.push("/search")}
+          >
+            Back to search
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -99,28 +153,28 @@ export default function ChefProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-2 h-[400px] sm:h-[500px] mb-12 rounded-2xl overflow-hidden group">
         <div className="col-span-1 md:col-span-2 row-span-2 relative">
           <img
-            src={chef.coverImage}
+            src={chef.coverImage || "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=1000&auto=format&fit=crop"}
             alt="Main dish"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           />
         </div>
         <div className="hidden md:block col-span-1 row-span-1 relative">
           <img
-            src={chef.gallery[0] || chef.coverImage}
+            src={chef.gallery[0] || chef.coverImage || "https://images.unsplash.com/photo-1544025162-8315ea07ec93?w=500&auto=format&fit=crop"}
             alt="Dish 1"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           />
         </div>
         <div className="hidden md:block col-span-1 row-span-1 relative">
           <img
-            src={chef.gallery[1] || chef.coverImage}
+            src={chef.gallery[1] || chef.coverImage || "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=500&auto=format&fit=crop"}
             alt="Dish 2"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           />
         </div>
         <div className="hidden md:block col-span-2 row-span-1 relative">
           <img
-            src={chef.gallery[2] || chef.coverImage}
+            src={chef.gallery[2] || chef.coverImage || "https://images.unsplash.com/photo-1514326640560-7d063ef8aedc?w=500&auto=format&fit=crop"}
             alt="Dish 3"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           />
@@ -141,12 +195,15 @@ export default function ChefProfilePage() {
                 Prepared by Chef {chef.name.split(" ")[0]}
               </h2>
               <p className="text-muted-foreground flex gap-2 items-center">
-                <span>10+ years experience</span> •{" "}
-                <span>100+ events hosted</span>
+                {chef.yearsOfExperience > 0 && (
+                  <span>{chef.yearsOfExperience}+ years experience</span>
+                )}
+                {chef.yearsOfExperience > 0 && <span>•</span>}
+                <span>{chef.reviews}+ events hosted</span>
               </p>
             </div>
             <img
-              src={chef.avatar}
+              src={chef.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(chef.name)}&background=random`}
               alt={chef.name}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-border object-cover"
             />
@@ -170,32 +227,60 @@ export default function ChefProfilePage() {
           <div className="py-8 border-b border-border">
             <h3 className="text-xl font-bold mb-4">Cuisine & Specialties</h3>
             <div className="flex flex-wrap gap-2 mb-6">
-              {chef.specialties.map((spec, i) => (
-                <Badge
-                  key={i}
-                  variant="secondary"
-                  className="px-3 py-1 text-sm"
-                >
-                  {spec}
-                </Badge>
-              ))}
+              {[...chef.cuisines, ...chef.specialties].length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No specialties listed yet.</p>
+              ) : (
+                [...chef.cuisines, ...chef.specialties].map((item, i) => (
+                  <Badge
+                    key={i}
+                    variant="secondary"
+                    className="px-3 py-1 text-sm"
+                  >
+                    {item}
+                  </Badge>
+                ))
+              )}
             </div>
+
+            {chef.serviceAreas && chef.serviceAreas.length > 0 && (
+              <>
+                <h3 className="text-lg font-bold mb-4 mt-8">Service Areas</h3>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {chef.serviceAreas.map((area, i) => (
+                    <Badge
+                      key={`area-${i}`}
+                      variant="outline"
+                      className="px-3 py-1 text-sm bg-background"
+                    >
+                      <MapPin className="w-3 h-3 mr-1.5" />
+                      {area}
+                    </Badge>
+                  ))}
+                </div>
+              </>
+            )}
 
             <h3 className="text-lg font-bold mb-4 mt-8">
               Dietary Capabilities
             </h3>
-            <div className="flex flex-wrap gap-2">
-              {chef.dietary.map((diet, i) => (
-                <Badge
-                  key={`diet-${i}`}
-                  variant="outline"
-                  className="px-3 py-1 text-sm bg-background"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
-                  {diet}
-                </Badge>
-              ))}
-            </div>
+            {chef.dietary.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                Dietary information not yet specified.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {chef.dietary.map((diet, i) => (
+                  <Badge
+                    key={`diet-${i}`}
+                    variant="outline"
+                    className="px-3 py-1 text-sm bg-background"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
+                    {diet}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Calendar Mock */}
@@ -216,38 +301,101 @@ export default function ChefProfilePage() {
             <div className="flex items-center gap-2 mb-6">
               <Star className="h-6 w-6 text-foreground" />
               <h3 className="text-2xl font-bold">
-                {chef.rating}{" "}
-                <span className="text-muted-foreground font-medium text-xl">
-                  · {chef.reviews} reviews
-                </span>
+                {chef.rating > 0 ? chef.rating.toFixed(1) : "No ratings yet"}{" "}
+                {chef.reviews > 0 && (
+                  <span className="text-muted-foreground font-medium text-xl">
+                    · {chef.reviews} review{chef.reviews !== 1 ? "s" : ""}
+                  </span>
+                )}
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {reviews.map((review, i) => (
-                <div key={review.id} className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold text-lg text-primary">
-                      {review.author.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="font-semibold">{review.author}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {review.date}
-                      </div>
-                    </div>
-                  </div>
-                  <RatingStars rating={review.rating} size="sm" />
-                  <p className="text-muted-foreground leading-relaxed">
-                    {review.content}
-                  </p>
-                </div>
-              ))}
-            </div>
+            {reviewsLoading && (
+              <div className="flex justify-center py-8">
+                <Loading text="Loading reviews..." />
+              </div>
+            )}
 
-            <Button variant="outline" className="mt-8 font-semibold">
-              Show all {chef.reviews} reviews
-            </Button>
+            {reviewsError && (
+              <p className="text-muted-foreground">
+                Unable to load reviews. Please try again later.
+              </p>
+            )}
+
+            {!reviewsLoading && !reviewsError && (
+              <>
+                {(!reviewsData?.reviews?.length) ? (
+                  <p className="text-muted-foreground">
+                    No reviews yet. Be the first to book this chef!
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {reviewsData.reviews.map((review) => (
+                      <div key={review._id} className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          {review.client?.avatar ? (
+                            <img
+                              src={review.client.avatar}
+                              alt={review.client.firstName}
+                              className="w-12 h-12 rounded-full object-cover border border-border"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold text-lg text-primary">
+                              {review.client?.firstName?.charAt(0) ?? "?"}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold">
+                              {review.client?.firstName} {review.client?.lastName}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {new Date(review.createdAt).toLocaleDateString(
+                                undefined,
+                                { year: "numeric", month: "long", day: "numeric" },
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <RatingStars rating={review.rating} size="sm" />
+                        <p className="text-muted-foreground leading-relaxed">
+                          {review.comment}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Pagination for reviews */}
+                {reviewsData?.pagination && (
+                  <div className="mt-8 flex items-center gap-3">
+                    {reviewsData.pagination.hasPreviousPage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReviewPage((p) => p - 1)}
+                      >
+                        Previous
+                      </Button>
+                    )}
+                    {reviewsData.pagination.hasNextPage && (
+                      <Button
+                        variant="outline"
+                        className="font-semibold"
+                        onClick={() => setReviewPage((p) => p + 1)}
+                      >
+                        Show more reviews
+                      </Button>
+                    )}
+                    {reviewsData.pagination.totalPages > 1 && (
+                      <span className="text-sm text-muted-foreground ml-auto">
+                        Page {reviewsData.pagination.currentPage} of{" "}
+                        {reviewsData.pagination.totalPages}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

@@ -160,7 +160,16 @@ const chefProfileSchema = new mongoose.Schema(
     totalReviews: {
       type: Number,
       default: 0,
-    }
+    },
+    // WHY dietaryOptions is stored on ChefProfile:
+    //   Clients search for chefs who can accommodate their dietary needs.
+    //   Storing dietary capabilities directly on the profile avoids a join
+    //   against the Menu collection on every search and keeps the query simple.
+    //   Examples: 'Vegetarian', 'Vegan', 'Gluten-Free', 'Halal', 'Kosher'.
+    dietaryOptions: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

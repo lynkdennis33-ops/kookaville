@@ -117,12 +117,13 @@ class ChefController {
    */
   async searchChefs(req, res, next) {
     try {
-      const chefs = await chefService.searchChefs(req.query);
+      const result = await chefService.searchChefs(req.query);
 
       res.status(200).json({
         success: true,
         data: {
-          chefs,
+          chefs: result.chefs,
+          pagination: result.pagination,
         },
       });
     } catch (error) {

@@ -1,10 +1,21 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { ChefCard } from "@/components/ui/chef-card";
-import { chefs } from "@/mocks/data";
+import { getFeaturedChefs } from "@/services/chef.service";
+import { Loading } from "@/components/shared/loading";
 
 export function FeaturedChefs() {
-  const featured = chefs.filter((c) => c.featured);
+  const {
+    data: chefs,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["chefs", "featured"],
+    queryFn: getFeaturedChefs,
+  });
 
   return (
     <section className="py-24 bg-background border-y border-border/40">
@@ -27,11 +38,25 @@ export function FeaturedChefs() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featured.map((chef) => (
-            <ChefCard key={chef.id} chef={chef} />
-          ))}
-        </div>
+        {isLoading && (
+          <div className="flex justify-center py-16">
+            <Loading size="lg" text="Loading chefs..." />
+          </div>
+        )}
+
+        {isError && (
+          <p className="text-center text-muted-foreground py-16">
+            Unable to load chefs. Please try again later.
+          </p>
+        )}
+
+        {!isLoading && !isError && chefs && chefs.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {chefs.map((chef) => (
+              <ChefCard key={chef.id} chef={chef} />
+            ))}
+          </div>
+        )}
 
         <div className="mt-8 flex justify-center sm:hidden">
           <Link

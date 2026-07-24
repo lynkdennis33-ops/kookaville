@@ -115,11 +115,19 @@ class ReviewService {
   }
 
   /**
-   * Get all reviews for a chef
+   * Get paginated reviews for a chef
    * Public — no authentication required
    * Sorted newest first, client populated with display fields only
+   *
+   * @param {string} chefId  ChefProfile _id
+   * @param {{ page?: number, limit?: number }} options
    */
-  async getChefReviews(chefId) {
+  async getChefReviews(chefId, options = {}) {
+    const { page = 1, limit = 5 } = options;
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Math.min(50, Number(limit) || 5));
+    const skip = (pageNum - 1) * limitNum;
+
     // Verify the chef profile exists before querying reviews
     const chefProfile = await ChefProfile.findById(chefId);
     if (!chefProfile) {
@@ -128,11 +136,25 @@ class ReviewService {
       throw error;
     }
 
+    const totalItems = await Review.countDocuments({ chef: chefId });
+    const totalPages = Math.ceil(totalItems / limitNum);
+
     const reviews = await Review.find({ chef: chefId })
       .populate('client', 'firstName lastName avatar')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
 
-    return reviews;
+    return {
+      reviews,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalItems,
+        hasNextPage: pageNum < totalPages,
+        hasPreviousPage: pageNum > 1,
+      },
+    };
   }
 
   /**

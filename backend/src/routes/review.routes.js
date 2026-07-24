@@ -14,8 +14,15 @@ router.post(
   reviewController.createReview.bind(reviewController)
 );
 
-// GET all reviews for a chef
+// GET all reviews for a chef (explicit /chef/ prefix — preferred)
 // Public route - no authentication required
+// Supports pagination: ?page=1&limit=5
+router.get(
+  '/chef/:chefId',
+  reviewController.getChefReviews.bind(reviewController)
+);
+
+// GET all reviews for a chef (legacy path — kept for backward compatibility)
 router.get(
   '/:chefId',
   reviewController.getChefReviews.bind(reviewController)
