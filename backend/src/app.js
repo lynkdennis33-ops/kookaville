@@ -15,6 +15,7 @@ import messageRoutes from './routes/message.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import savedChefRoutes from './routes/savedChef.routes.js';
 import testRoutes from './routes/test.routes.js';
 
 const app = express();
@@ -74,6 +75,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/saved-chefs', savedChefRoutes);
 // Development/testing routes (can be disabled in production)
 app.use('/api/test', testRoutes);
 

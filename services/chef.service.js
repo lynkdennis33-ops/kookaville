@@ -19,7 +19,7 @@ import api from "@/lib/api";
  * @param {Object} chef  Raw ChefProfile from the API response
  * @returns {Object}     Normalised chef object
  */
-function normalizeChef(chef) {
+export function normalizeChef(chef) {
   const firstName = chef.user?.firstName ?? "";
   const lastName = chef.user?.lastName ?? "";
   const name = [firstName, lastName].filter(Boolean).join(" ");

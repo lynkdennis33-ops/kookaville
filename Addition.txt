@@ -1,5 +1,4 @@
 1.Make the colors match the logo
 
 
-
-Remember to let chef select 
+Remember to let chef select cuisine and Dietary Needs
