@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ChevronLeft, CreditCard, ShieldCheck, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,34 +11,153 @@ import { Stepper } from "@/components/ui/stepper";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { chefs } from "@/mocks/data";
+import { Loading } from "@/components/shared/loading";
+import { getChefById } from "@/services/chef.service";
+import { getMenusByChef } from "@/services/menu.service";
+import { createBooking } from "@/services/booking.service";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function BookingFlowPage() {
-  const { id } = useParams();
+  const { id } = useParams(); // ChefProfile _id
   const router = useRouter();
-  const chef = chefs.find((c) => c.id === id) || chefs[0];
 
+  // ── Form state ──────────────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  // Form State Mock
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(undefined);
+  const [eventTime, setEventTime] = useState("19:00");
+  const [selectedMenuId, setSelectedMenuId] = useState("");
+  const [guests, setGuests] = useState(2);
+  const [childGuests, setChildGuests] = useState(0);
+  const [specialRequests, setSpecialRequests] = useState("");
+  const [stepError, setStepError] = useState("");
+
   const steps = [
     { title: "Details" },
     { title: "Guests" },
-    { title: "Payment" },
+    { title: "Confirm" },
   ];
 
-  const handleNext = () => setStep((s) => Math.min(3, s + 1));
-  const handleBack = () => setStep((s) => Math.max(1, s - 1));
+  const totalGuests = guests + childGuests;
+
+  // ── Data fetching ───────────────────────────────────────────────────────────
+  const {
+    data: chef,
+    isLoading: chefLoading,
+    isError: chefError,
+  } = useQuery({
+    queryKey: ["chef", id],
+    queryFn: () => getChefById(id),
+    enabled: Boolean(id),
+  });
+
+  const { data: menus = [], isLoading: menusLoading } = useQuery({
+    queryKey: ["menus", id],
+    queryFn: () => getMenusByChef(id),
+    enabled: Boolean(id),
+  });
+
+  const selectedMenu = menus.find((m) => m._id === selectedMenuId) ?? null;
+
+  // ── Booking mutation ────────────────────────────────────────────────────────
+  const {
+    mutate: submitBooking,
+    isPending,
+    error: mutationError,
+  } = useMutation({
+    mutationFn: createBooking,
+    onSuccess: () => {
+      toast.success("Booking submitted!", {
+        description: "Your request has been sent to the chef.",
+      });
+      router.push("/dashboard/bookings?success=true");
+    },
+  });
+
+  // ── Step navigation with validation ────────────────────────────────────────
+  const handleNext = () => {
+    setStepError("");
+
+    if (step === 1) {
+      if (!date) {
+        setStepError("Please select a date.");
+        return;
+      }
+      if (!selectedMenuId) {
+        setStepError("Please select a menu.");
+        return;
+      }
+    }
+
+    if (step === 2 && totalGuests < 1) {
+      setStepError("At least 1 guest is required.");
+      return;
+    }
+
+    setStep((s) => Math.min(3, s + 1));
+  };
+
+  const handleBack = () => {
+    setStepError("");
+    setStep((s) => Math.max(1, s - 1));
+  };
 
   const handleConfirm = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push(`/dashboard/bookings?success=true`);
-    }, 2000);
+    setStepError("");
+
+    if (!date || !selectedMenuId) {
+      setStepError("Missing booking details. Please go back and complete all fields.");
+      return;
+    }
+
+    submitBooking({
+      menu: selectedMenuId,
+      bookingDate: date.toISOString(),
+      eventTime,
+      guests: totalGuests,
+      specialRequests: specialRequests.trim() || undefined,
+    });
   };
+
+  // ── Loading / error states ──────────────────────────────────────────────────
+  if (chefLoading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-center py-32">
+          <Loading size="lg" text="Loading chef profile..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (chefError || !chef) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-32">
+          <p className="text-muted-foreground text-lg">
+            Unable to load chef details. Please try again.
+          </p>
+          <Button variant="outline" className="mt-6" onClick={() => router.back()}>
+            Go back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pricing calculations ────────────────────────────────────────────────────
+  const basePrice = selectedMenu ? selectedMenu.price * totalGuests : 0;
+  const serviceFee = 45;
+  const taxes = Math.round(basePrice * 0.08);
+  const total = basePrice + serviceFee + taxes;
+
+  const menuOptions = menus.map((m) => ({
+    value: m._id,
+    label: `${m.name} — $${m.price}/person`,
+  }));
+
+  // Backend error message from mutation
+  const backendError =
+    mutationError?.response?.data?.message || mutationError?.message;
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -69,20 +190,20 @@ export default function BookingFlowPage() {
               transition={{ duration: 0.2 }}
               className="space-y-8"
             >
+              {/* ── Step 1: Event details ─────────────────────────────────── */}
               {step === 1 && (
                 <div className="space-y-8">
                   <h2 className="text-2xl font-bold">When is the event?</h2>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                      <h3 className="text-sm font-semibold mb-3">
-                        Select Date
-                      </h3>
+                      <h3 className="text-sm font-semibold mb-3">Select Date</h3>
                       <div className="border border-border rounded-xl p-2 inline-block bg-card">
                         <Calendar
                           mode="single"
                           selected={date}
                           onSelect={setDate}
+                          disabled={{ before: new Date() }}
                           className="rounded-md border-0"
                         />
                       </div>
@@ -93,36 +214,47 @@ export default function BookingFlowPage() {
                         <h3 className="text-sm font-semibold mb-3">Time</h3>
                         <Select
                           options={[
-                            { value: "17:00", label: "17:00 PM" },
-                            { value: "18:00", label: "18:00 PM" },
-                            { value: "19:00", label: "19:00 PM" },
-                            { value: "20:00", label: "20:00 PM" },
+                            { value: "12:00", label: "12:00 PM" },
+                            { value: "13:00", label: "1:00 PM" },
+                            { value: "14:00", label: "2:00 PM" },
+                            { value: "17:00", label: "5:00 PM" },
+                            { value: "18:00", label: "6:00 PM" },
+                            { value: "19:00", label: "7:00 PM" },
+                            { value: "20:00", label: "8:00 PM" },
                           ]}
-                          value="19:00"
-                          onChange={() => {}}
+                          value={eventTime}
+                          onChange={setEventTime}
                         />
                       </div>
 
                       <div>
-                        <h3 className="text-sm font-semibold mb-3">
-                          Event Type
-                        </h3>
-                        <Select
-                          options={[
-                            { value: "dinner", label: "Dinner Party" },
-                            { value: "lunch", label: "Corporate Lunch" },
-                            {
-                              value: "romantic",
-                              label: "Romantic Dinner for 2",
-                            },
-                            { value: "prep", label: "Weekly Meal Prep" },
-                          ]}
-                          value="dinner"
-                          onChange={() => {}}
-                        />
+                        <h3 className="text-sm font-semibold mb-3">Menu</h3>
+                        {menusLoading ? (
+                          <Loading size="sm" text="Loading menus…" />
+                        ) : menuOptions.length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">
+                            No menus available for this chef yet.
+                          </p>
+                        ) : (
+                          <Select
+                            options={menuOptions}
+                            value={selectedMenuId}
+                            onChange={setSelectedMenuId}
+                            placeholder="Select a menu"
+                          />
+                        )}
+                        {selectedMenu?.description && (
+                          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                            {selectedMenu.description}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
+
+                  {stepError && (
+                    <p className="text-sm text-red-600 font-medium">{stepError}</p>
+                  )}
 
                   <Button
                     size="lg"
@@ -134,6 +266,7 @@ export default function BookingFlowPage() {
                 </div>
               )}
 
+              {/* ── Step 2: Guests ────────────────────────────────────────── */}
               {step === 2 && (
                 <div className="space-y-8">
                   <h2 className="text-2xl font-bold">Who's coming?</h2>
@@ -142,23 +275,24 @@ export default function BookingFlowPage() {
                     <div className="flex items-center justify-between pb-6 border-b border-border">
                       <div>
                         <h3 className="font-semibold text-lg">Adults</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Ages 13 or above
-                        </p>
+                        <p className="text-sm text-muted-foreground">Ages 13 or above</p>
                       </div>
                       <div className="flex items-center gap-4">
                         <Button
                           variant="outline"
                           size="icon"
                           className="rounded-full h-8 w-8"
+                          onClick={() => setGuests((g) => Math.max(1, g - 1))}
+                          disabled={guests <= 1}
                         >
                           -
                         </Button>
-                        <span className="font-medium w-4 text-center">4</span>
+                        <span className="font-medium w-4 text-center">{guests}</span>
                         <Button
                           variant="outline"
                           size="icon"
                           className="rounded-full h-8 w-8"
+                          onClick={() => setGuests((g) => g + 1)}
                         >
                           +
                         </Button>
@@ -168,24 +302,24 @@ export default function BookingFlowPage() {
                     <div className="flex items-center justify-between pb-6 border-b border-border">
                       <div>
                         <h3 className="font-semibold text-lg">Children</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Ages 2-12
-                        </p>
+                        <p className="text-sm text-muted-foreground">Ages 2–12</p>
                       </div>
                       <div className="flex items-center gap-4">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="rounded-full h-8 w-8 disabled:opacity-50"
-                          disabled
+                          className="rounded-full h-8 w-8"
+                          onClick={() => setChildGuests((c) => Math.max(0, c - 1))}
+                          disabled={childGuests <= 0}
                         >
                           -
                         </Button>
-                        <span className="font-medium w-4 text-center">0</span>
+                        <span className="font-medium w-4 text-center">{childGuests}</span>
                         <Button
                           variant="outline"
                           size="icon"
                           className="rounded-full h-8 w-8"
+                          onClick={() => setChildGuests((c) => c + 1)}
                         >
                           +
                         </Button>
@@ -195,28 +329,60 @@ export default function BookingFlowPage() {
 
                   <div className="max-w-xl">
                     <h3 className="text-lg font-bold mb-3">
-                      Dietary Needs & Special Requests
+                      Dietary Needs &amp; Special Requests
                     </h3>
                     <Textarea
                       placeholder="E.g., One guest is highly allergic to peanuts. Another is strictly vegan."
                       rows={4}
+                      value={specialRequests}
+                      onChange={(e) => setSpecialRequests(e.target.value)}
                     />
                   </div>
+
+                  {stepError && (
+                    <p className="text-sm text-red-600 font-medium">{stepError}</p>
+                  )}
 
                   <Button
                     size="lg"
                     className="w-full sm:w-auto px-12"
                     onClick={handleNext}
                   >
-                    Continue to Payment
+                    Continue to Confirm
                   </Button>
                 </div>
               )}
 
+              {/* ── Step 3: Confirm & payment UI ─────────────────────────── */}
               {step === 3 && (
                 <div className="space-y-8">
                   <h2 className="text-2xl font-bold">Pay with</h2>
 
+                  {/* Booking summary card */}
+                  <div className="border border-border rounded-xl p-5 bg-secondary/20 space-y-3 max-w-xl">
+                    <h3 className="font-semibold">Booking Summary</h3>
+                    <div className="grid grid-cols-2 gap-y-2 text-sm">
+                      <span className="text-muted-foreground">Chef</span>
+                      <span className="font-medium text-right">{chef.name}</span>
+                      <span className="text-muted-foreground">Menu</span>
+                      <span className="font-medium text-right">{selectedMenu?.name ?? "—"}</span>
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="font-medium text-right">
+                        {date?.toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <span className="text-muted-foreground">Time</span>
+                      <span className="font-medium text-right">{eventTime}</span>
+                      <span className="text-muted-foreground">Guests</span>
+                      <span className="font-medium text-right">{totalGuests}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment method selection — UI preserved for Phase D2 */}
                   <div className="space-y-4 max-w-xl">
                     <div className="border-2 border-primary rounded-xl p-4 flex items-start gap-4 bg-primary/5 cursor-pointer relative overflow-hidden">
                       <div className="absolute right-[-10px] top-[-10px] bg-primary text-primary-foreground text-[10px] font-bold py-3 pl-4 pr-6 rounded-bl-xl rotate-45 transform origin-top-right">
@@ -287,18 +453,25 @@ export default function BookingFlowPage() {
                     </div>
                   </div>
 
+                  {/* Backend / validation error */}
+                  {(stepError || backendError) && (
+                    <p className="text-sm text-red-600 font-medium max-w-xl">
+                      {stepError || backendError}
+                    </p>
+                  )}
+
                   <div className="pt-6 border-t border-border max-w-xl">
                     <p className="text-xs text-muted-foreground mb-4">
-                      By selecting the button below, I agree to the Host's House
-                      Rules, Ground rules for guests, Kookaville's Rebooking and
+                      By selecting the button below, I agree to the Host&apos;s House
+                      Rules, Ground rules for guests, Kookaville&apos;s Rebooking and
                       Refund Policy, and that Kookaville can charge my payment
-                      method.
+                      method when the booking is accepted.
                     </p>
                     <Button
                       size="lg"
                       className="w-full sm:w-auto px-12 bg-accent hover:bg-accent/90"
                       onClick={handleConfirm}
-                      isLoading={isLoading}
+                      isLoading={isPending}
                     >
                       Confirm and pay
                     </Button>
@@ -314,7 +487,10 @@ export default function BookingFlowPage() {
           <div className="sticky top-24 border border-border rounded-2xl p-6 shadow-card bg-card mb-8">
             <div className="flex gap-4 items-start border-b border-border pb-6 mb-6">
               <img
-                src={chef.avatar}
+                src={
+                  chef.avatar ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(chef.name)}&background=random`
+                }
                 alt={chef.name}
                 className="w-24 h-24 rounded-xl object-cover"
               />
@@ -335,32 +511,35 @@ export default function BookingFlowPage() {
 
             <h3 className="text-lg font-bold mb-4">Price details</h3>
             <div className="space-y-3 text-sm mb-6">
-              <div className="flex justify-between">
-                <span>${chef.pricePerPerson} x 4 guests</span>
-                <span>${chef.pricePerPerson * 4}</span>
-              </div>
+              {selectedMenu ? (
+                <div className="flex justify-between">
+                  <span>
+                    ${selectedMenu.price} × {totalGuests} guest{totalGuests !== 1 ? "s" : ""}
+                  </span>
+                  <span>${basePrice}</span>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-xs italic">
+                  Select a menu to see pricing
+                </p>
+              )}
               <div className="flex justify-between">
                 <span className="underline decoration-dotted cursor-help">
                   Service fee
                 </span>
-                <span>$45</span>
+                <span>${serviceFee}</span>
               </div>
               <div className="flex justify-between">
                 <span className="underline decoration-dotted cursor-help">
                   Taxes
                 </span>
-                <span>${Math.round(chef.pricePerPerson * 4 * 0.08)}</span>
+                <span>{selectedMenu ? `$${taxes}` : "—"}</span>
               </div>
             </div>
 
             <div className="flex justify-between font-bold text-lg pt-4 border-t border-border">
               <span>Total (USD)</span>
-              <span>
-                $
-                {chef.pricePerPerson * 4 +
-                  45 +
-                  Math.round(chef.pricePerPerson * 4 * 0.08)}
-              </span>
+              <span>{selectedMenu ? `$${total}` : "—"}</span>
             </div>
           </div>
 
