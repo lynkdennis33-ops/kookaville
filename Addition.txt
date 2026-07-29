@@ -2,3 +2,26 @@
 
 
 Remember to let chef select cuisine and Dietary Needs
+
+
+
+D1 Booking
+
+↓
+
+D2 Messaging
+
+↓
+
+D3 Notifications  (Don't forget to add UI where users can see all notification. I think we should use a popup dialog box for the notification system)
+
+↓
+
+D4 Payments
+
+↓
+
+D5 Reviews
+
+↓
+

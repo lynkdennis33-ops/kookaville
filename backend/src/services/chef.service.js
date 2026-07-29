@@ -1,4 +1,5 @@
 import ChefProfile from '../models/ChefProfile.js';
+import User from '../models/User.js';
 import notificationService from './notification.service.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../middleware/upload.js';
 
@@ -201,12 +202,21 @@ class ChefService {
     // Build MongoDB query
     const query = { verificationStatus: 'approved' };
 
-    // Keyword search in bio, specialties, cuisines (case-insensitive)
+    // Keyword search: match User first/last name OR ChefProfile bio/specialties
     if (keyword && keyword.trim()) {
+      const matchingUsers = await User.find({
+        $or: [
+          { firstName: { $regex: keyword, $options: 'i' } },
+          { lastName: { $regex: keyword, $options: 'i' } },
+        ],
+      }).select('_id');
+
+      const userIds = matchingUsers.map((u) => u._id);
+
       query.$or = [
+        { user: { $in: userIds } },
         { bio: { $regex: keyword, $options: 'i' } },
         { specialties: { $regex: keyword, $options: 'i' } },
-        { cuisines: { $regex: keyword, $options: 'i' } },
       ];
     }
 

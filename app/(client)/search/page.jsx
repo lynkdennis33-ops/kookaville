@@ -231,7 +231,7 @@ function SearchPageContent() {
             <div className="sticky top-24 space-y-8 h-[calc(100vh-8rem)] overflow-y-auto pr-4 custom-scrollbar">
               <div className="space-y-4 shadow-sm border border-border p-5 rounded-2xl bg-card">
                 <Input
-                  placeholder="Search by name or cuisine..."
+                  placeholder="Search chefs by name..."
                   value={keywordDraft}
                   onChange={(e) => setKeywordDraft(e.target.value)}
                   leftIcon={<SearchIcon className="h-4 w-4" />}
