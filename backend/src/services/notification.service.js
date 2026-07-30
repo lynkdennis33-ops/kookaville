@@ -83,6 +83,20 @@ class NotificationService {
   }
 
   /**
+   * Count unread notifications for a given user.
+   *
+   * @param {ObjectId|string} userId - Authenticated user's ID
+   * @returns {Promise<number>} Number of unread notifications
+   */
+  async getUnreadCount(userId) {
+    const count = await Notification.countDocuments({
+      recipient: userId,
+      isRead: false,
+    });
+    return count;
+  }
+
+  /**
    * Mark all unread notifications as read for a given user.
    *
    * @param {ObjectId|string} userId - Authenticated user's ID

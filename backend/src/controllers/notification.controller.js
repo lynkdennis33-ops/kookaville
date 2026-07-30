@@ -27,6 +27,23 @@ class NotificationController {
   }
 
   /**
+   * GET /api/notifications/unread-count
+   * Returns the number of unread notifications for the authenticated user.
+   */
+  async getUnreadCount(req, res, next) {
+    try {
+      const count = await notificationService.getUnreadCount(req.user._id);
+
+      res.status(200).json({
+        success: true,
+        data: { count },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * PATCH /api/notifications/:id/read
    * Marks a single notification as read.
    * Only the recipient may mark their own notifications.

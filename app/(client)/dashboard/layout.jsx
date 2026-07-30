@@ -10,6 +10,7 @@ import {
   MessageSquare,
   CreditCard,
   LayoutDashboard,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -23,6 +24,7 @@ export default function ClientDashboardLayout({ children }) {
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
     { name: "Messages", href: "/dashboard/messages", icon: MessageSquare },
+    { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
     { name: "Saved Chefs", href: "/dashboard/saved", icon: Heart },
     { name: "Payment Methods", href: "/dashboard/payments", icon: CreditCard },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },

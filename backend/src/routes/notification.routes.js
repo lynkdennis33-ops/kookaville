@@ -15,6 +15,16 @@ router.get(
   notificationController.getNotifications.bind(notificationController)
 );
 
+// GET /api/notifications/unread-count
+// Returns the count of unread notifications for the authenticated user.
+// NOTE: Must be declared BEFORE /:id/read to prevent Express treating
+//       "unread-count" as a dynamic :id segment.
+router.get(
+  '/unread-count',
+  auth,
+  notificationController.getUnreadCount.bind(notificationController)
+);
+
 // PATCH /api/notifications/read-all
 // Marks every unread notification as read for the authenticated user
 // NOTE: This route must be declared BEFORE /:id/read to avoid Express

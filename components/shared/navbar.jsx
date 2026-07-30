@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -122,10 +123,12 @@ export function Navbar() {
                 </Button>
               </div>
             ) : (
-              <div
-                className="relative ml-4 pl-4 border-l border-border/30"
-                ref={dropdownRef}
-              >
+              <div className="flex items-center gap-2 ml-4 pl-4 border-l border-border/30">
+                <NotificationBell />
+                <div
+                  className="relative"
+                  ref={dropdownRef}
+                >
                 <button
                   onClick={() => setUserDropdownOpen((prev) => !prev)}
                   aria-expanded={userDropdownOpen}
@@ -195,22 +198,25 @@ export function Navbar() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+                </div>
               </div>
             )}
           </nav>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6 text-foreground" />
-            ) : (
-              <Menu className="h-6 w-6 text-foreground" />
-            )}
-          </Button>
+          <div className="flex items-center gap-1 md:hidden">
+            <NotificationBell />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6 text-foreground" />
+              ) : (
+                <Menu className="h-6 w-6 text-foreground" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
