@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -14,8 +14,30 @@ import { Calendar } from "@/components/ui/calendar";
 import { Loading } from "@/components/shared/loading";
 import { getChefById } from "@/services/chef.service";
 import { getMenusByChef } from "@/services/menu.service";
-import { createBooking } from "@/services/booking.service";
+import { createBooking, getChefAvailability } from "@/services/booking.service";
+import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Day names matching ChefProfile.availability[].day values
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function timeToMinutes(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minsToTime(mins) {
+  const h = Math.floor(mins / 60).toString().padStart(2, '0');
+  const m = (mins % 60).toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function formatTime12(time24) {
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+}
 
 export default function BookingFlowPage() {
   const { id } = useParams(); // ChefProfile _id
@@ -24,7 +46,8 @@ export default function BookingFlowPage() {
   // ── Form state ──────────────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
   const [date, setDate] = useState(undefined);
-  const [eventTime, setEventTime] = useState("19:00");
+  const [eventTime, setEventTime] = useState("");
+  const [duration, setDuration] = useState(2);
   const [selectedMenuId, setSelectedMenuId] = useState("");
   const [guests, setGuests] = useState(2);
   const [childGuests, setChildGuests] = useState(0);
@@ -57,7 +80,91 @@ export default function BookingFlowPage() {
   });
 
   const selectedMenu = menus.find((m) => m._id === selectedMenuId) ?? null;
+  // ── Availability ──────────────────────────────────────────────────────────
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
 
+  // null = chef has no schedule configured (don’t restrict the calendar)
+  const availableDays = useMemo(
+    () =>
+      chef?.availability?.length
+        ? new Set(chef.availability.map((a) => a.day))
+        : null,
+    [chef?.availability],
+  );
+
+  const isDateDisabled = useCallback(
+    (d) => {
+      if (d < today) return true;
+      if (!availableDays) return false;
+      return !availableDays.has(DAY_NAMES[d.getDay()]);
+    },
+    [today, availableDays],
+  );
+
+  // Calendar modifier that highlights available future dates
+  const isDateAvailable = useCallback(
+    (d) => {
+      if (!availableDays || d < today) return false;
+      return availableDays.has(DAY_NAMES[d.getDay()]);
+    },
+    [today, availableDays],
+  );
+
+  const selectedDateStr = useMemo(() => {
+    if (!date) return null;
+    const y = date.getFullYear();
+    const mo = (date.getMonth() + 1).toString().padStart(2, "0");
+    const d = date.getDate().toString().padStart(2, "0");
+    return `${y}-${mo}-${d}`;
+  }, [date]);
+
+  // Fetch booked slots for the selected date to generate conflict-aware time slots
+  const { data: dateAvailability, isLoading: availLoading } = useQuery({
+    queryKey: ["chef", id, "availability", selectedDateStr],
+    queryFn: () => getChefAvailability(id, selectedDateStr),
+    enabled: Boolean(id) && Boolean(selectedDateStr),
+    staleTime: 30_000,
+  });
+
+  // Valid starting times = chef’s window − existing bookings, constrained by duration
+  const validTimeSlots = useMemo(() => {
+    if (!date || !dateAvailability?.dayAvailability) return [];
+    const { startTime, endTime } = dateAvailability.dayAvailability;
+    const bookedSlots = dateAvailability.bookedSlots ?? [];
+    const startMins = timeToMinutes(startTime);
+    const endMins = timeToMinutes(endTime);
+    const slots = [];
+    for (let t = startMins; t + duration * 60 <= endMins; t += 60) {
+      const slotEnd = t + duration * 60;
+      const blocked = bookedSlots.some((bs) => {
+        const bStart = timeToMinutes(bs.startTime);
+        const bEnd = bStart + bs.duration * 60;
+        return t < bEnd && slotEnd > bStart;
+      });
+      if (!blocked) slots.push(minsToTime(t));
+    }
+    return slots;
+  }, [date, dateAvailability, duration]);
+
+  // Auto-select the first valid slot when the slot list changes (date or duration change)
+  useEffect(() => {
+    if (validTimeSlots.length > 0 && !validTimeSlots.includes(eventTime)) {
+      setEventTime(validTimeSlots[0]);
+    } else if (validTimeSlots.length === 0 && eventTime !== "") {
+      setEventTime("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validTimeSlots]);
+
+  const handleDateSelect = useCallback((newDate) => {
+    setDate(newDate);
+    setEventTime("");
+    setStepError("");
+  }, []);
   // ── Booking mutation ────────────────────────────────────────────────────────
   const {
     mutate: submitBooking,
@@ -80,6 +187,10 @@ export default function BookingFlowPage() {
     if (step === 1) {
       if (!date) {
         setStepError("Please select a date.");
+        return;
+      }
+      if (!eventTime) {
+        setStepError("Please select a time slot.");
         return;
       }
       if (!selectedMenuId) {
@@ -109,10 +220,16 @@ export default function BookingFlowPage() {
       return;
     }
 
+    if (!eventTime) {
+      setStepError("Please select a valid time slot.");
+      return;
+    }
+
     submitBooking({
       menu: selectedMenuId,
       bookingDate: date.toISOString(),
       eventTime,
+      duration,
       guests: totalGuests,
       specialRequests: specialRequests.trim() || undefined,
     });
@@ -202,29 +319,60 @@ export default function BookingFlowPage() {
                         <Calendar
                           mode="single"
                           selected={date}
-                          onSelect={setDate}
-                          disabled={{ before: new Date() }}
+                          onSelect={handleDateSelect}
+                          disabled={isDateDisabled}
+                          modifiers={{ available: isDateAvailable }}
+                          modifiersClassNames={{ available: "ring-1 ring-primary/30 bg-primary/5 font-medium" }}
                           className="rounded-md border-0"
                         />
                       </div>
+                      {availableDays && (
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-primary/40 bg-primary/10" />
+                          Available dates highlighted
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-6">
                       <div>
+                        <h3 className="text-sm font-semibold mb-3">Duration</h3>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[2, 3, 4, 5].map((h) => (
+                            <button
+                              key={h}
+                              type="button"
+                              onClick={() => setDuration(h)}
+                              className={cn(
+                                "flex flex-col items-center justify-center py-3 rounded-xl border-2 font-semibold transition-colors",
+                                duration === h
+                                  ? "border-primary bg-primary/5 text-primary"
+                                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                              )}
+                            >
+                              <span className="text-base font-bold">{h}h</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
                         <h3 className="text-sm font-semibold mb-3">Time</h3>
-                        <Select
-                          options={[
-                            { value: "12:00", label: "12:00 PM" },
-                            { value: "13:00", label: "1:00 PM" },
-                            { value: "14:00", label: "2:00 PM" },
-                            { value: "17:00", label: "5:00 PM" },
-                            { value: "18:00", label: "6:00 PM" },
-                            { value: "19:00", label: "7:00 PM" },
-                            { value: "20:00", label: "8:00 PM" },
-                          ]}
-                          value={eventTime}
-                          onChange={setEventTime}
-                        />
+                        {!date ? (
+                          <p className="text-sm text-muted-foreground">Select a date first.</p>
+                        ) : availLoading ? (
+                          <Loading size="sm" text="Loading available times…" />
+                        ) : validTimeSlots.length === 0 ? (
+                          <p className="text-sm text-amber-600 font-medium">
+                            No available slots for this date and duration.
+                          </p>
+                        ) : (
+                          <Select
+                            options={validTimeSlots.map((t) => ({ value: t, label: formatTime12(t) }))}
+                            value={eventTime}
+                            onChange={setEventTime}
+                          />
+                        )}
                       </div>
 
                       <div>
@@ -377,6 +525,8 @@ export default function BookingFlowPage() {
                       </span>
                       <span className="text-muted-foreground">Time</span>
                       <span className="font-medium text-right">{eventTime}</span>
+                      <span className="text-muted-foreground">Duration</span>
+                      <span className="font-medium text-right">{duration} hours</span>
                       <span className="text-muted-foreground">Guests</span>
                       <span className="font-medium text-right">{totalGuests}</span>
                     </div>

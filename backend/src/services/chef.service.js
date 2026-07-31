@@ -1,4 +1,5 @@
 import ChefProfile from '../models/ChefProfile.js';
+import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 import notificationService from './notification.service.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../middleware/upload.js';
@@ -176,6 +177,52 @@ class ChefService {
     }
 
     return chef;
+  }
+
+  /**
+   * Return a chef's weekly availability schedule and, when a date is supplied,
+   * the already-booked slots for that day (pending + accepted only).
+   * Used by the booking page to generate valid time slots without exposing
+   * private booking or client information.
+   */
+  async getChefAvailability(chefProfileId, dateStr) {
+    const chefProfile = await ChefProfile.findById(chefProfileId)
+      .select('availability verificationStatus');
+
+    if (!chefProfile) {
+      const error = new Error('Chef not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // No date requested — return just the weekly schedule
+    if (!dateStr) {
+      return { availability: chefProfile.availability };
+    }
+
+    const bookingDate = new Date(dateStr);
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = DAYS[bookingDate.getUTCDay()];
+    const dayAvailability = chefProfile.availability.find((a) => a.day === dayName) ?? null;
+
+    // Find active bookings on the requested calendar day
+    const startOfDay = new Date(dateStr);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(dateStr);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const existingBookings = await Booking.find({
+      chef: chefProfileId,
+      bookingDate: { $gte: startOfDay, $lte: endOfDay },
+      status: { $in: ['pending', 'accepted'] },
+    }).select('eventTime duration');
+
+    const bookedSlots = existingBookings.map((b) => ({
+      startTime: b.eventTime,
+      duration:  b.duration ?? 2, // conservative fallback for legacy records
+    }));
+
+    return { dayAvailability, bookedSlots };
   }
 
   /**

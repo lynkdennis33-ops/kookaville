@@ -7,12 +7,31 @@ import api from "@/lib/api";
  *
  * POST /api/bookings
  *
- * @param {{ menu: string, bookingDate: string, eventTime: string, guests: number, specialRequests?: string }} payload
+ * @param {{ menu: string, bookingDate: string, eventTime: string, duration: number, guests: number, specialRequests?: string }} payload
  * @returns {Promise<Object>} Created booking document
  */
 export async function createBooking(payload) {
   const { data } = await api.post("/bookings", payload);
   return data.data.booking;
+}
+
+/**
+ * Fetch a chef's availability schedule and, when date is provided, the already-booked
+ * slots for that calendar day (pending + accepted bookings only).
+ *
+ * GET /api/chef/:chefId/availability?date=YYYY-MM-DD
+ *
+ * Response without date:  { availability: [...] }
+ * Response with date:     { dayAvailability: { day, startTime, endTime } | null, bookedSlots: [...] }
+ *
+ * @param {string} chefId     ChefProfile MongoDB _id
+ * @param {string} [dateISO]  Date string in YYYY-MM-DD format
+ * @returns {Promise<Object>}
+ */
+export async function getChefAvailability(chefId, dateISO) {
+  const params = dateISO ? { date: dateISO } : {};
+  const { data } = await api.get(`/chef/${chefId}/availability`, { params });
+  return data.data;
 }
 
 /**

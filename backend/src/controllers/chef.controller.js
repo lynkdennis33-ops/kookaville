@@ -106,6 +106,28 @@ class ChefController {
   }
 
   /**
+   * GET /api/chef/:id/availability
+   * Returns the chef's weekly availability schedule.
+   * When ?date=YYYY-MM-DD is supplied also returns already-booked slots for that day
+   * so the booking page can generate valid time slots.
+   * Public route — only exposes time slots, not client information.
+   */
+  async getAvailability(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { date } = req.query;
+      const result = await chefService.getChefAvailability(id, date);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Search and filter approved chefs
    * Public route
    * Query parameters:

@@ -44,6 +44,7 @@ class BookingService {
       'menu',
       'bookingDate',
       'eventTime',
+      'duration',
       'guests',
       'specialRequests',
     ];
@@ -109,6 +110,63 @@ class BookingService {
     // Read chef from menu - client never provides chef ID
     const chefId = menu.chef;
 
+    // ── Validate availability and prevent overlapping bookings ──────────────
+
+    // Validate duration is one of the allowed values
+    const VALID_DURATIONS = [2, 3, 4, 5];
+    const duration = Number(filteredData.duration);
+    if (!VALID_DURATIONS.includes(duration)) {
+      const error = new Error('Booking duration must be 2, 3, 4, or 5 hours.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check the chef is available on the requested day of the week
+    const dayAvailability = this._getAvailabilityForDate(chefProfile, filteredData.bookingDate);
+    if (!dayAvailability) {
+      const error = new Error('Chef is not available on this date. Please choose another date.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Validate event time + duration fits within the chef's availability window
+    const newStartMins = this._timeToMinutes(filteredData.eventTime);
+    const newEndMins   = newStartMins + duration * 60;
+    const availStart   = this._timeToMinutes(dayAvailability.startTime);
+    const availEnd     = this._timeToMinutes(dayAvailability.endTime);
+
+    if (newStartMins < availStart || newEndMins > availEnd) {
+      const error = new Error(
+        "The selected time and duration extend beyond the chef's available hours."
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check the chef has no conflicting active bookings
+    const chefConflicts = await this._getConflicts(
+      { chef: chefId }, filteredData.bookingDate, newStartMins, newEndMins
+    );
+    if (chefConflicts.length > 0) {
+      const error = new Error(
+        'The chef is already booked during this time. Please choose another time.'
+      );
+      error.statusCode = 409;
+      throw error;
+    }
+
+    // Check the client has no conflicting bookings (with any chef)
+    const clientConflicts = await this._getConflicts(
+      { client: userId }, filteredData.bookingDate, newStartMins, newEndMins
+    );
+    if (clientConflicts.length > 0) {
+      const error = new Error(
+        'You already have another booking during this time. Please choose a different time.'
+      );
+      error.statusCode = 409;
+      throw error;
+    }
+
     // Create booking with server-resolved fields
     const booking = new Booking({
       client: userId,
@@ -116,6 +174,7 @@ class BookingService {
       menu: menu._id,
       bookingDate: filteredData.bookingDate,
       eventTime: filteredData.eventTime,
+      duration,
       guests: filteredData.guests,
       specialRequests: filteredData.specialRequests,
       // status defaults to 'pending' via schema default
@@ -486,6 +545,49 @@ class BookingService {
     }
 
     return updatedBooking;
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────────────────
+
+  // Converts "HH:mm" to minutes since midnight
+  _timeToMinutes(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  // Two intervals [aStart, aEnd) and [bStart, bEnd) overlap when aStart < bEnd AND aEnd > bStart.
+  // A booking starting exactly when another ends is NOT an overlap.
+  _hasOverlap(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && aEnd > bStart;
+  }
+
+  // Returns the chef's availability entry for the day-of-week of bookingDate (UTC), or null.
+  _getAvailabilityForDate(chefProfile, bookingDate) {
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = DAYS[new Date(bookingDate).getUTCDay()];
+    return chefProfile.availability.find((a) => a.day === dayName) ?? null;
+  }
+
+  // Returns existing active bookings that overlap the requested time interval.
+  // filter is merged into the Booking query (pass { chef: id } or { client: id }).
+  // Legacy bookings without a duration field fall back to 2h to avoid opening blocked slots.
+  async _getConflicts(filter, bookingDate, startMins, endMins) {
+    const startOfDay = new Date(bookingDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(bookingDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const existing = await Booking.find({
+      ...filter,
+      bookingDate: { $gte: startOfDay, $lte: endOfDay },
+      status: { $in: ['pending', 'accepted'] },
+    }).select('eventTime duration');
+
+    return existing.filter((b) => {
+      const bStart = this._timeToMinutes(b.eventTime);
+      const bEnd   = bStart + (b.duration ?? 2) * 60;
+      return this._hasOverlap(startMins, endMins, bStart, bEnd);
+    });
   }
 }
 

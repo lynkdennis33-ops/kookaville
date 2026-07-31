@@ -25,6 +25,10 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Event time is required'],
     },
+    duration: {
+      type: Number,
+      enum: [2, 3, 4, 5],
+    },
     guests: {
       type: Number,
       required: [true, 'Number of guests is required'],
@@ -52,6 +56,10 @@ const bookingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Support efficient overlap queries (chef+date and client+date lookups)
+bookingSchema.index({ chef: 1, bookingDate: 1 });
+bookingSchema.index({ client: 1, bookingDate: 1 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
 

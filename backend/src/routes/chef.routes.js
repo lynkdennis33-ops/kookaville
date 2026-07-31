@@ -95,6 +95,10 @@ router.get('/featured', chefController.getFeaturedChefs.bind(chefController));
 // :id refers to ChefProfile _id
 router.get('/:id', chefController.getChef.bind(chefController));
 
+// GET chef availability schedule and optionally booked slots for a date - Public route
+// Query: ?date=YYYY-MM-DD  (omit for weekly schedule only)
+router.get('/:id/availability', chefController.getAvailability.bind(chefController));
+
 // PATCH update chef verification status - Admin only
 // :id refers to ChefProfile _id
 // Body: { status: 'approved' | 'rejected' | 'pending' }
