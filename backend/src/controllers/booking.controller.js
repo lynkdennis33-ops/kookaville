@@ -31,16 +31,16 @@ class BookingController {
    * Get bookings for the authenticated user
    * Protected route - requires authentication
    * Results filtered by role: client sees own, chef sees assigned, admin sees all
+   * Supports ?status=&page=&limit= for chef portal filtering and pagination
    */
   async getBookings(req, res, next) {
     try {
-      const bookings = await bookingService.getBookings(req.user);
+      const { status, page, limit } = req.query;
+      const result = await bookingService.getBookings(req.user, { status, page, limit });
 
       res.status(200).json({
         success: true,
-        data: {
-          bookings,
-        },
+        data: result,
       });
     } catch (error) {
       next(error);
@@ -97,6 +97,35 @@ class BookingController {
         data: {
           booking,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Chef accepts a pending booking with a chosen duration.
+   * Protected route - requires chef role.
+   * Body: { durationHours: 2|3|4|5 }
+   */
+  async acceptBooking(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { durationHours } = req.body;
+
+      if (!durationHours) {
+        return res.status(400).json({
+          success: false,
+          message: 'durationHours is required to accept a booking.',
+        });
+      }
+
+      const booking = await bookingService.acceptBooking(req.user, id, durationHours);
+
+      res.status(200).json({
+        success: true,
+        message: 'Booking accepted.',
+        data: { booking },
       });
     } catch (error) {
       next(error);

@@ -267,6 +267,8 @@ export default function ClientBookingsPage() {
   } = useQuery({
     queryKey: ["bookings"],
     queryFn: getBookings,
+    // Extract the bookings array from { bookings, pagination? }
+    select: (result) => result.bookings ?? [],
   });
 
   const { mutate: doCancel, isPending: cancelling } = useMutation({

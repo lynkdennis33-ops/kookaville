@@ -25,9 +25,22 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Event time is required'],
     },
+    // Set by the chef when accepting — client never provides this
     duration: {
       type: Number,
       enum: [2, 3, 4, 5],
+    },
+    // Computed on acceptance: eventTime + duration hours in HH:mm format
+    endTime: {
+      type: String,
+    },
+    // Acceptance audit trail
+    acceptedAt: {
+      type: Date,
+    },
+    acceptedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
     guests: {
       type: Number,

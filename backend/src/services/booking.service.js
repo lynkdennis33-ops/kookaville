@@ -39,12 +39,11 @@ class BookingService {
    * Validates booking date is not in the past
    */
   async createBooking(userId, bookingData) {
-    // Define allowed fields for booking creation
+    // Duration is intentionally excluded — the chef chooses it when accepting
     const allowedFields = [
       'menu',
       'bookingDate',
       'eventTime',
-      'duration',
       'guests',
       'specialRequests',
     ];
@@ -110,16 +109,7 @@ class BookingService {
     // Read chef from menu - client never provides chef ID
     const chefId = menu.chef;
 
-    // ── Validate availability and prevent overlapping bookings ──────────────
-
-    // Validate duration is one of the allowed values
-    const VALID_DURATIONS = [2, 3, 4, 5];
-    const duration = Number(filteredData.duration);
-    if (!VALID_DURATIONS.includes(duration)) {
-      const error = new Error('Booking duration must be 2, 3, 4, or 5 hours.');
-      error.statusCode = 400;
-      throw error;
-    }
+    // ── Validate the requested day/time falls within chef's availability ────
 
     // Check the chef is available on the requested day of the week
     const dayAvailability = this._getAvailabilityForDate(chefProfile, filteredData.bookingDate);
@@ -129,54 +119,30 @@ class BookingService {
       throw error;
     }
 
-    // Validate event time + duration fits within the chef's availability window
-    const newStartMins = this._timeToMinutes(filteredData.eventTime);
-    const newEndMins   = newStartMins + duration * 60;
+    // Validate the start time falls within the chef's availability window.
+    // Duration validation is deferred to acceptance — the chef chooses it then.
+    const reqStartMins = this._timeToMinutes(filteredData.eventTime);
     const availStart   = this._timeToMinutes(dayAvailability.startTime);
     const availEnd     = this._timeToMinutes(dayAvailability.endTime);
 
-    if (newStartMins < availStart || newEndMins > availEnd) {
+    if (reqStartMins < availStart || reqStartMins >= availEnd) {
       const error = new Error(
-        "The selected time and duration extend beyond the chef's available hours."
+        "The selected time is outside the chef's available hours."
       );
       error.statusCode = 400;
       throw error;
     }
 
-    // Check the chef has no conflicting active bookings
-    const chefConflicts = await this._getConflicts(
-      { chef: chefId }, filteredData.bookingDate, newStartMins, newEndMins
-    );
-    if (chefConflicts.length > 0) {
-      const error = new Error(
-        'The chef is already booked during this time. Please choose another time.'
-      );
-      error.statusCode = 409;
-      throw error;
-    }
-
-    // Check the client has no conflicting bookings (with any chef)
-    const clientConflicts = await this._getConflicts(
-      { client: userId }, filteredData.bookingDate, newStartMins, newEndMins
-    );
-    if (clientConflicts.length > 0) {
-      const error = new Error(
-        'You already have another booking during this time. Please choose a different time.'
-      );
-      error.statusCode = 409;
-      throw error;
-    }
-
-    // Create booking with server-resolved fields
+    // Create booking with server-resolved fields (no duration — set on acceptance)
     const booking = new Booking({
       client: userId,
       chef: chefId,
       menu: menu._id,
       bookingDate: filteredData.bookingDate,
       eventTime: filteredData.eventTime,
-      duration,
       guests: filteredData.guests,
       specialRequests: filteredData.specialRequests,
+      // duration/endTime/acceptedAt/acceptedBy are set when the chef accepts
       // status defaults to 'pending' via schema default
     });
 
@@ -249,18 +215,17 @@ class BookingService {
   /**
    * Get bookings based on the authenticated user's role
    * - client: only their own bookings
-   * - chef: bookings assigned to their ChefProfile
+   * - chef: bookings assigned to their ChefProfile (supports status filter + pagination)
    * - admin: all bookings
    * Sorted newest first, populated with client, chef (with user), and menu
    */
-  async getBookings(user) {
+  async getBookings(user, options = {}) {
+    const { status, page, limit } = options;
     let query = {};
 
     if (user.role === 'client') {
-      // Return only bookings where this user is the client
       query = { client: user._id };
     } else if (user.role === 'chef') {
-      // Find the chef's profile to get their ChefProfile._id
       const chefProfile = await ChefProfile.findOne({ user: user._id });
 
       if (!chefProfile) {
@@ -273,8 +238,13 @@ class BookingService {
     }
     // admin: query stays empty — returns all bookings
 
-    const bookings = await Booking.find(query)
-      .populate('client', 'firstName lastName')
+    // Optional status filter (chef portal filter tabs)
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    const baseQuery = Booking.find(query)
+      .populate('client', 'firstName lastName avatar')
       .populate({
         path: 'chef',
         populate: { path: 'user', select: 'firstName lastName' },
@@ -282,7 +252,29 @@ class BookingService {
       .populate('menu', 'name price')
       .sort({ createdAt: -1 });
 
-    return bookings;
+    // Pagination is optional — omit page/limit to get all results (client/admin)
+    if (page && limit) {
+      const pageNum  = Math.max(1, Number(page)  || 1);
+      const limitNum = Math.max(1, Math.min(100, Number(limit) || 20));
+      const skip     = (pageNum - 1) * limitNum;
+      const total    = await Booking.countDocuments(query);
+
+      const bookings = await baseQuery.skip(skip).limit(limitNum);
+
+      return {
+        bookings,
+        pagination: {
+          currentPage: pageNum,
+          totalPages:  Math.ceil(total / limitNum),
+          totalItems:  total,
+          hasNextPage: pageNum < Math.ceil(total / limitNum),
+          hasPreviousPage: pageNum > 1,
+        },
+      };
+    }
+
+    const bookings = await baseQuery;
+    return { bookings };
   }
 
   /**
@@ -547,12 +539,164 @@ class BookingService {
     return updatedBooking;
   }
 
+  /**
+   * Accept a booking request — chef-only action.
+   * The chef supplies the duration; the backend computes endTime, validates
+   * the slot fits within working hours and has no overlap with other accepted
+   * bookings, then stamps the acceptance metadata.
+   *
+   * WHY separate from updateBookingStatus: acceptance requires extra data (duration)
+   * and its own validation logic.  Keeping it separate keeps both methods readable.
+   */
+  async acceptBooking(user, bookingId, durationHours) {
+    const VALID_DURATIONS = [2, 3, 4, 5];
+    const dur = Number(durationHours);
+    if (!VALID_DURATIONS.includes(dur)) {
+      const error = new Error('Duration must be 2, 3, 4, or 5 hours.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      const error = new Error('Booking not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (booking.status !== 'pending') {
+      const error = new Error(`Only pending bookings can be accepted (current status: ${booking.status}).`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Verify the chef owns this booking
+    const chefProfile = await ChefProfile.findOne({ user: user._id });
+    if (!chefProfile) {
+      const error = new Error('Chef profile not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (booking.chef.toString() !== chefProfile._id.toString()) {
+      const error = new Error('You are not authorized to accept this booking.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // ── Compute endTime ────────────────────────────────────────────────────
+    const startMins  = this._timeToMinutes(booking.eventTime);
+    const endMins    = startMins + dur * 60;
+    const endTime    = this._minutesToTime(endMins);
+
+    // ── Validate against chef's working hours ─────────────────────────────
+    const dayAvailability = this._getAvailabilityForDate(chefProfile, booking.bookingDate);
+    if (!dayAvailability) {
+      const error = new Error('This booking exceeds your working hours.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const availStart = this._timeToMinutes(dayAvailability.startTime);
+    const availEnd   = this._timeToMinutes(dayAvailability.endTime);
+
+    if (startMins < availStart || endMins > availEnd) {
+      const error = new Error('This booking exceeds your working hours.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // ── Check for overlapping ACCEPTED bookings ────────────────────────────
+    // Only ACCEPTED bookings block the slot — pending bookings are unconfirmed
+    const startOfDay = new Date(booking.bookingDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(booking.bookingDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const acceptedBookings = await Booking.find({
+      chef: chefProfile._id,
+      bookingDate: { $gte: startOfDay, $lte: endOfDay },
+      status: 'accepted',
+      _id: { $ne: bookingId }, // exclude the current booking
+    }).select('eventTime duration');
+
+    for (const existing of acceptedBookings) {
+      const bStart = this._timeToMinutes(existing.eventTime);
+      // duration is guaranteed on accepted bookings; fall back to 2 for legacy records
+      const bEnd   = bStart + (existing.duration ?? 2) * 60;
+      if (this._hasOverlap(startMins, endMins, bStart, bEnd)) {
+        const error = new Error('This booking overlaps another accepted booking.');
+        error.statusCode = 409;
+        throw error;
+      }
+    }
+
+    // ── Persist acceptance ─────────────────────────────────────────────────
+    booking.status      = 'accepted';
+    booking.duration    = dur;
+    booking.endTime     = endTime;
+    booking.acceptedAt  = new Date();
+    booking.acceptedBy  = user._id;
+    await booking.save();
+
+    const updatedBooking = await Booking.findById(booking._id)
+      .populate('client', 'firstName lastName email')
+      .populate({
+        path: 'chef',
+        populate: { path: 'user', select: 'firstName lastName email' },
+      })
+      .populate('menu', 'name price');
+
+    // Notify the client
+    await notificationService.createNotification({
+      recipient: updatedBooking.client._id,
+      title: 'Booking Accepted',
+      message: 'Your booking has been accepted.',
+      type: 'booking',
+      referenceId: updatedBooking._id,
+      referenceModel: 'Booking',
+    });
+
+    // Email the client
+    try {
+      const chefName   = updatedBooking.chef?.user
+        ? `${updatedBooking.chef.user.firstName} ${updatedBooking.chef.user.lastName}`
+        : 'Your Chef';
+      const clientName = updatedBooking.client
+        ? `${updatedBooking.client.firstName} ${updatedBooking.client.lastName}`
+        : 'Your Client';
+
+      const bookingData = this._buildBookingEmailData(
+        updatedBooking, updatedBooking.menu, chefName, clientName
+      );
+
+      if (updatedBooking.client?.email) {
+        await emailService.sendBookingAcceptedEmail(
+          updatedBooking.client.email,
+          updatedBooking.client.firstName,
+          bookingData
+        );
+      }
+    } catch (emailErr) {
+      console.error('[BookingService] Accept email failed:', emailErr.message);
+    }
+
+    return updatedBooking;
+  }
+
   // ── Private helpers ──────────────────────────────────────────────────────────
 
   // Converts "HH:mm" to minutes since midnight
   _timeToMinutes(timeStr) {
     const [h, m] = timeStr.split(':').map(Number);
     return h * 60 + m;
+  }
+
+  // Converts minutes since midnight to "HH:mm"
+  _minutesToTime(mins) {
+    const h = Math.floor(mins / 60).toString().padStart(2, '0');
+    const m = (mins % 60).toString().padStart(2, '0');
+    return `${h}:${m}`;
   }
 
   // Two intervals [aStart, aEnd) and [bStart, bEnd) overlap when aStart < bEnd AND aEnd > bStart.

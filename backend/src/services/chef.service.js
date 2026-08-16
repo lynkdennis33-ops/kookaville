@@ -205,17 +205,19 @@ class ChefService {
     const dayName = DAYS[bookingDate.getUTCDay()];
     const dayAvailability = chefProfile.availability.find((a) => a.day === dayName) ?? null;
 
-    // Find active bookings on the requested calendar day
     const startOfDay = new Date(dateStr);
     startOfDay.setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(dateStr);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
+    // Find only ACCEPTED bookings on the requested day.
+    // WHY only accepted: pending bookings have no confirmed duration, so they
+    // cannot block the calendar.  Overlap validation runs when the chef accepts.
     const existingBookings = await Booking.find({
       chef: chefProfileId,
       bookingDate: { $gte: startOfDay, $lte: endOfDay },
-      status: { $in: ['pending', 'accepted'] },
-    }).select('eventTime duration');
+      status: 'accepted',
+    }).select('eventTime duration endTime');
 
     const bookedSlots = existingBookings.map((b) => ({
       startTime: b.eventTime,

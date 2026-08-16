@@ -47,7 +47,6 @@ export default function BookingFlowPage() {
   const [step, setStep] = useState(1);
   const [date, setDate] = useState(undefined);
   const [eventTime, setEventTime] = useState("");
-  const [duration, setDuration] = useState(2);
   const [selectedMenuId, setSelectedMenuId] = useState("");
   const [guests, setGuests] = useState(2);
   const [childGuests, setChildGuests] = useState(0);
@@ -130,7 +129,9 @@ export default function BookingFlowPage() {
     staleTime: 30_000,
   });
 
-  // Valid starting times = chef’s window − existing bookings, constrained by duration
+  // Valid starting times = chef's window minus accepted bookings.
+  // Duration is unknown at this stage (chosen by chef on acceptance),
+  // so we show every 1-hour increment not blocked by an accepted booking.
   const validTimeSlots = useMemo(() => {
     if (!date || !dateAvailability?.dayAvailability) return [];
     const { startTime, endTime } = dateAvailability.dayAvailability;
@@ -138,17 +139,17 @@ export default function BookingFlowPage() {
     const startMins = timeToMinutes(startTime);
     const endMins = timeToMinutes(endTime);
     const slots = [];
-    for (let t = startMins; t + duration * 60 <= endMins; t += 60) {
-      const slotEnd = t + duration * 60;
+    for (let t = startMins; t < endMins; t += 60) {
       const blocked = bookedSlots.some((bs) => {
         const bStart = timeToMinutes(bs.startTime);
-        const bEnd = bStart + bs.duration * 60;
-        return t < bEnd && slotEnd > bStart;
+        const bEnd = bStart + (bs.duration ?? 2) * 60;
+        // block any start time that falls inside an already-accepted slot
+        return t >= bStart && t < bEnd;
       });
       if (!blocked) slots.push(minsToTime(t));
     }
     return slots;
-  }, [date, dateAvailability, duration]);
+  }, [date, dateAvailability]);
 
   // Auto-select the first valid slot when the slot list changes (date or duration change)
   useEffect(() => {
@@ -229,7 +230,6 @@ export default function BookingFlowPage() {
       menu: selectedMenuId,
       bookingDate: date.toISOString(),
       eventTime,
-      duration,
       guests: totalGuests,
       specialRequests: specialRequests.trim() || undefined,
     });
@@ -335,27 +335,6 @@ export default function BookingFlowPage() {
                     </div>
 
                     <div className="space-y-6">
-                      <div>
-                        <h3 className="text-sm font-semibold mb-3">Duration</h3>
-                        <div className="grid grid-cols-4 gap-2">
-                          {[2, 3, 4, 5].map((h) => (
-                            <button
-                              key={h}
-                              type="button"
-                              onClick={() => setDuration(h)}
-                              className={cn(
-                                "flex flex-col items-center justify-center py-3 rounded-xl border-2 font-semibold transition-colors",
-                                duration === h
-                                  ? "border-primary bg-primary/5 text-primary"
-                                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
-                              )}
-                            >
-                              <span className="text-base font-bold">{h}h</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
                       <div>
                         <h3 className="text-sm font-semibold mb-3">Time</h3>
                         {!date ? (
@@ -526,7 +505,7 @@ export default function BookingFlowPage() {
                       <span className="text-muted-foreground">Time</span>
                       <span className="font-medium text-right">{eventTime}</span>
                       <span className="text-muted-foreground">Duration</span>
-                      <span className="font-medium text-right">{duration} hours</span>
+                      {/* <span className="font-medium text-right">{duration} hours</span> */}
                       <span className="text-muted-foreground">Guests</span>
                       <span className="font-medium text-right">{totalGuests}</span>
                     </div>

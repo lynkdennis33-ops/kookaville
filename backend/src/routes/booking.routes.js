@@ -18,7 +18,11 @@ router.get('/', auth, bookingController.getBookings.bind(bookingController));
 // Access control enforced by role
 router.get('/:id', auth, bookingController.getBookingById.bind(bookingController));
 
-// PATCH update booking status
+// PATCH accept a booking (chef only) — must come before /:id to avoid ambiguity
+// Body: { durationHours: 2|3|4|5 }
+router.patch('/:id/accept', auth, authorize('chef'), bookingController.acceptBooking.bind(bookingController));
+
+// PATCH update booking status (cancel / reject / complete)
 // Protected route - requires authentication
 // Transition rules enforced by role
 router.patch('/:id', auth, bookingController.updateBookingStatus.bind(bookingController));

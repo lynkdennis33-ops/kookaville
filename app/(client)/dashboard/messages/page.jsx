@@ -12,10 +12,18 @@ import { toast } from "sonner";
 import { Send, Search, MessageSquare, AlertCircle, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// â”€â”€â”€ Date / time helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+// Converts "HH:mm" (24h) to "H:mm AM/PM" for display in conversation list
+function formatTime12(time24) {
+  if (!time24) return "";
+  const [h, m] = time24.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, "0")} ${period}`;
 }
 
 function formatEventDate(iso) {
@@ -96,8 +104,10 @@ function UserAvatar({ src, name, className }) {
 // â”€â”€â”€ Conversation item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ConversationItem({ booking, isSelected, onClick }) {
-  const name = getChefName(booking);
-  const eventDate = formatEventDate(booking.eventDate);
+  const chefName  = getChefName(booking);
+  const menuName  = booking.menu?.name ?? null;
+  const eventDate = formatEventDate(booking.bookingDate ?? booking.eventDate);
+  const eventTime = booking.eventTime ?? null;
 
   return (
     <button
@@ -107,21 +117,31 @@ function ConversationItem({ booking, isSelected, onClick }) {
         isSelected ? "bg-secondary" : "hover:bg-secondary/50",
       )}
     >
-      <InitialsAvatar name={name} className="w-11 h-11 text-sm" />
+      <InitialsAvatar name={chefName} className="w-11 h-11 text-sm" />
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm truncate">Chef {name.split(" ")[0]}</p>
+        {/* Chef name + menu name disambiguate when the same chef has multiple bookings */}
+        <p className="font-semibold text-sm truncate">
+          Chef {chefName.split(" ")[0]}
+          {menuName && (
+            <span className="font-normal text-muted-foreground"> &middot; {menuName}</span>
+          )}
+        </p>
         <p className="text-xs text-muted-foreground truncate">
-          {eventDate ? `Event Â· ${eventDate}` : booking.status}
+          {eventDate
+            ? `${eventDate}${eventTime ? " \u00b7 " + formatTime12(eventTime) : ""}`
+            : "No date set"}
         </p>
       </div>
       <span
         className={cn(
           "text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 capitalize",
-          booking.status === "confirmed"
+          booking.status === "accepted"
             ? "bg-emerald-100 text-emerald-700"
             : booking.status === "pending"
               ? "bg-amber-100 text-amber-700"
-              : "bg-secondary text-muted-foreground",
+              : booking.status === "rejected" || booking.status === "cancelled"
+                ? "bg-red-100 text-red-700"
+                : "bg-blue-100 text-blue-700",
         )}
       >
         {booking.status}
@@ -130,9 +150,8 @@ function ConversationItem({ booking, isSelected, onClick }) {
   );
 }
 
-// â”€â”€â”€ Message bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 function MessageBubble({ msg, isMine, showAvatar }) {
+
   const senderName = msg.sender
     ? `${msg.sender.firstName ?? ""} ${msg.sender.lastName ?? ""}`.trim() || "User"
     : "User";
@@ -382,6 +401,7 @@ export default function MessagesPage() {
     queryKey: ["bookings"],
     queryFn: getBookings,
     staleTime: 30_000,
+    select: (result) => result.bookings ?? [],
   });
 
   const selectedBooking = bookings.find((b) => b._id === selectedBookingId) ?? null;
