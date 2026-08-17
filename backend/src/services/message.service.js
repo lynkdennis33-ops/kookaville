@@ -58,11 +58,16 @@ class MessageService {
       message: message.trim(),
     });
 
+    // Populate sender/receiver so the socket payload matches the REST getMessages shape
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate('sender', 'firstName lastName avatar')
+      .populate('receiver', 'firstName lastName avatar');
+
     // Broadcast to all sockets in the booking room.
     // Only emitted after a successful save — failures throw before reaching here.
     getIo()?.to(bookingId).emit('newMessage', {
       bookingId,
-      message: newMessage,
+      message: populatedMessage,
     });
 
     // Notify the receiver of the new message
@@ -117,6 +122,115 @@ class MessageService {
       .sort({ createdAt: 1 });
 
     return messages;
+  }
+
+  /**
+   * List all booking conversations for the authenticated user, enriched with
+   * the latest message and the unread count for that user.
+   * Sorted by most-recent activity (last message date → booking creation date).
+   *
+   * @param {Object} user  - req.user (must have _id and role)
+   * @returns {Promise<Array<{booking, lastMessage, unreadCount}>>}
+   */
+  async getConversations(user) {
+    let bookingQuery = {};
+
+    if (user.role === 'client') {
+      bookingQuery = { client: user._id };
+    } else if (user.role === 'chef') {
+      const chefProfile = await ChefProfile.findOne({ user: user._id });
+      if (!chefProfile) return [];
+      bookingQuery = { chef: chefProfile._id };
+    }
+    // admin: empty query returns all bookings
+
+    const bookings = await Booking.find(bookingQuery)
+      .populate('client', 'firstName lastName avatar')
+      .populate({
+        path: 'chef',
+        populate: { path: 'user', select: 'firstName lastName avatar' },
+      })
+      .populate('menu', 'name price')
+      .sort({ createdAt: -1 });
+
+    const conversations = await Promise.all(
+      bookings.map(async (booking) => {
+        const [lastMessage, unreadCount] = await Promise.all([
+          Message.findOne({ booking: booking._id })
+            .populate('sender', 'firstName lastName')
+            .sort({ createdAt: -1 }),
+          Message.countDocuments({
+            booking: booking._id,
+            receiver: user._id,
+            isRead: false,
+          }),
+        ]);
+
+        return {
+          booking,
+          lastMessage: lastMessage || null,
+          unreadCount,
+        };
+      })
+    );
+
+    // Most-recently-active conversations first
+    conversations.sort((a, b) => {
+      const dateA = a.lastMessage?.createdAt ?? a.booking.createdAt;
+      const dateB = b.lastMessage?.createdAt ?? b.booking.createdAt;
+      return new Date(dateB) - new Date(dateA);
+    });
+
+    return conversations;
+  }
+
+  /**
+   * Mark all messages received by the authenticated user in a booking as read.
+   * Authorization: requester must be a booking participant.
+   *
+   * @param {ObjectId|string} userId    - Authenticated user's ID
+   * @param {string}          bookingId - Booking MongoDB _id
+   */
+  async markMessagesAsRead(userId, bookingId) {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      const error = new Error('Booking not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const chefProfile = await ChefProfile.findById(booking.chef);
+    if (!chefProfile) {
+      const error = new Error('Chef profile not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const clientId    = booking.client.toString();
+    const chefUserId  = chefProfile.user.toString();
+    const requesterId = userId.toString();
+
+    if (requesterId !== clientId && requesterId !== chefUserId) {
+      const error = new Error('Unauthorized.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    await Message.updateMany(
+      { booking: bookingId, receiver: userId, isRead: false },
+      { $set: { isRead: true } }
+    );
+  }
+
+  /**
+   * Return the total number of unread messages for the authenticated user
+   * across all conversations.
+   *
+   * @param {ObjectId|string} userId
+   * @returns {Promise<number>}
+   */
+  async getUnreadCount(userId) {
+    return Message.countDocuments({ receiver: userId, isRead: false });
   }
 }
 

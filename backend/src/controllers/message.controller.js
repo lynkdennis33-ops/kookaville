@@ -52,6 +52,39 @@ if (!bookingId) {
       next(error);
     }
   }
+
+  async getConversations(req, res, next) {
+    try {
+      const conversations = await messageService.getConversations(req.user);
+      res.status(200).json({ success: true, data: { conversations } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async markAsRead(req, res, next) {
+    try {
+      const { bookingId } = req.body;
+      if (!bookingId) {
+        const error = new Error('Booking ID is required.');
+        error.statusCode = 400;
+        throw error;
+      }
+      await messageService.markMessagesAsRead(req.user._id, bookingId);
+      res.status(200).json({ success: true, message: 'Messages marked as read.' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUnreadCount(req, res, next) {
+    try {
+      const count = await messageService.getUnreadCount(req.user._id);
+      res.status(200).json({ success: true, data: { count } });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new MessageController();

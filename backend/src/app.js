@@ -31,14 +31,31 @@ app.use(
   })
 );
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later',
+// Rate limiting — three separate policies so messaging cannot exhaust the auth budget
+// and auth cannot exhaust the general API budget.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // strict — prevents brute-force; still comfortable for dev/testing
+  message: { success: false, message: 'Too many authentication attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-app.use('/api/', limiter);
+const messagingLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200, // generous — REST is used only for initial load, send, and mark-read; socket handles real-time
+  message: { success: false, message: 'Too many messaging requests, please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300, // generous for normal app usage (bookings, chefs, notifications, etc.)
+  message: { success: false, message: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Body parsing middleware
 //
@@ -63,21 +80,21 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/chef', chefRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/menus', menuRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/saved-chefs', savedChefRoutes);
+// Routes — each group carries its own limiter; no endpoint is double-limited
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
+app.use('/api/chef', apiLimiter, chefRoutes);
+app.use('/api/categories', apiLimiter, categoryRoutes);
+app.use('/api/menus', apiLimiter, menuRoutes);
+app.use('/api/bookings', apiLimiter, bookingRoutes);
+app.use('/api/reviews', apiLimiter, reviewRoutes);
+app.use('/api/messages', messagingLimiter, messageRoutes);
+app.use('/api/notifications', apiLimiter, notificationRoutes);
+app.use('/api/payments', apiLimiter, paymentRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
+app.use('/api/saved-chefs', apiLimiter, savedChefRoutes);
 // Development/testing routes (can be disabled in production)
-app.use('/api/test', testRoutes);
+app.use('/api/test', apiLimiter, testRoutes);
 
 // 404 handler
 app.use((req, res) => {

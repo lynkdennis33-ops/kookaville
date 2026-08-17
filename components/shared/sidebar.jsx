@@ -14,6 +14,7 @@ import {
   Settings,
   Users,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 
 export function Sidebar({ items, role }) {
@@ -89,11 +90,12 @@ export function Sidebar({ items, role }) {
 
 // Pre-defined sets
 export const CHEF_SIDEBAR_ITEMS = [
-  { name: "Dashboard", href: "/chef-portal/dashboard", icon: LayoutDashboard },
-  { name: "Bookings", href: "/chef-portal/bookings", icon: Calendar },
-  { name: "My Menus", href: "/chef-portal/menus", icon: Utensils },
-  { name: "Earnings", href: "/chef-portal/earnings", icon: DollarSign },
-  { name: "Settings", href: "/chef-portal/settings", icon: Settings },
+  { name: "Dashboard",  href: "/chef-portal/dashboard", icon: LayoutDashboard },
+  { name: "Bookings",   href: "/chef-portal/bookings",  icon: Calendar },
+  { name: "Messages",   href: "/chef-portal/messages",  icon: MessageSquare },
+  { name: "My Menus",   href: "/chef-portal/menus",     icon: Utensils },
+  { name: "Earnings",   href: "/chef-portal/earnings",  icon: DollarSign },
+  { name: "Settings",   href: "/chef-portal/settings",  icon: Settings },
 ];
 
 export const ADMIN_SIDEBAR_ITEMS = [

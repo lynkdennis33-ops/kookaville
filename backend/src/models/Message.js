@@ -22,9 +22,17 @@ const messageSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
+
+// Efficient unread-count and per-conversation-read queries
+messageSchema.index({ receiver: 1, isRead: 1 });
+messageSchema.index({ booking: 1, receiver: 1, isRead: 1 });
 
 const Message = mongoose.model('Message', messageSchema);
 

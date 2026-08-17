@@ -339,7 +339,6 @@ function AcceptDialog({ booking, onConfirm, onCancel, isPending }) {
   );
 }
 
-// â”€â”€ Reject dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function RejectDialog({ booking, onConfirm, onCancel, isPending }) {
   if (!booking) return null;
