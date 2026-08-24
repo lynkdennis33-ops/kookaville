@@ -66,6 +66,27 @@ class ChefController {
   }
 
   /**
+   * Resubmit a rejected chef application
+   * Protected route — any authenticated user with a rejected profile
+   * Resets verificationStatus from 'rejected' to 'pending'
+   */
+  async resubmitProfile(req, res, next) {
+    try {
+      const chefProfile = await chefService.resubmitChefProfile(req.user._id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Your application has been resubmitted for review.',
+        data: {
+          chefProfile,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get all approved chefs for discovery with pagination and sorting
    * Public route
    * Query parameters: page, limit, sort

@@ -602,6 +602,33 @@ class ChefService {
     certificate.deleteOne();
     await chefProfile.save();
   }
+
+  /**
+   * Allow a rejected applicant to resubmit their chef application.
+   * Resets verificationStatus from 'rejected' to 'pending'.
+   * Clears the previous rejection notes so the admin sees a fresh review.
+   */
+  async resubmitChefProfile(userId) {
+    const chefProfile = await ChefProfile.findOne({ user: userId });
+
+    if (!chefProfile) {
+      const error = new Error('Chef profile not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (chefProfile.verificationStatus !== 'rejected') {
+      const error = new Error('Only rejected applications can be resubmitted.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    chefProfile.verificationStatus = 'pending';
+    chefProfile.verificationNotes = '';
+    await chefProfile.save();
+
+    return chefProfile;
+  }
 }
 
 export default new ChefService();

@@ -11,6 +11,7 @@ import {
   CreditCard,
   LayoutDashboard,
   Bell,
+  ChefHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -29,6 +30,11 @@ export default function ClientDashboardLayout({ children }) {
     { name: "Payment Methods", href: "/dashboard/payments", icon: CreditCard },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
+
+  // Only show "Become a Chef" for clients (not yet chefs or admins)
+  if (user?.role === "client") {
+    tabs.push({ name: "Become a Chef", href: "/chef/onboarding", icon: ChefHat });
+  }
 
   return (
     <RequireAuth>

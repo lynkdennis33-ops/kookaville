@@ -19,6 +19,10 @@ router.get('/profile', auth, chefController.getProfile.bind(chefController));
 // PATCH update chef profile
 router.patch('/profile', auth, chefController.updateProfile.bind(chefController));
 
+// POST resubmit a rejected chef application (resets status to pending)
+// Must come before /:id to avoid Express treating 'resubmit' as a dynamic id
+router.post('/profile/resubmit', auth, chefController.resubmitProfile.bind(chefController));
+
 // ── Gallery ──────────────────────────────────────────────────────────────────
 
 // POST upload one or more gallery images

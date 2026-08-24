@@ -107,3 +107,45 @@ export async function getChefById(id) {
   const { data } = await api.get(`/chef/${id}`);
   return normalizeChef(data.data.chef);
 }
+
+/**
+ * Fetch the authenticated user's own chef profile (raw, not normalised).
+ * Throws a 404 Axios error if the user has no profile yet.
+ * GET /api/chef/profile
+ */
+export async function getMyChefProfile() {
+  const { data } = await api.get("/chef/profile");
+  return data.data.chefProfile;
+}
+
+/**
+ * Submit a new chef application.
+ * POST /api/chef/profile
+ *
+ * @param {{ bio, yearsOfExperience, specialties, cuisines, serviceAreas, pricePerPerson, availability }} profileData
+ */
+export async function createChefProfile(profileData) {
+  const { data } = await api.post("/chef/profile", profileData);
+  return data.data.chefProfile;
+}
+
+/**
+ * Update the authenticated user's own chef profile (allowed fields only).
+ * PATCH /api/chef/profile
+ *
+ * Allowed: bio, yearsOfExperience, specialties, cuisines, serviceAreas, pricePerPerson, availability
+ */
+export async function updateChefProfile(profileData) {
+  const { data } = await api.patch("/chef/profile", profileData);
+  return data.data.chefProfile;
+}
+
+/**
+ * Resubmit a rejected chef application.
+ * Resets verificationStatus from 'rejected' back to 'pending'.
+ * POST /api/chef/profile/resubmit
+ */
+export async function resubmitChefProfile() {
+  const { data } = await api.post("/chef/profile/resubmit");
+  return data.data.chefProfile;
+}
