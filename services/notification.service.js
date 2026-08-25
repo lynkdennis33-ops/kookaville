@@ -73,5 +73,7 @@ export function getNotificationHref(notification, userRole) {
   if (type === "payment") return "/dashboard/payments";
   if (type === "message") return "/dashboard/messages";
   if (type === "review") return "/dashboard/bookings";
+  // system notifications for clients are chef-approval related
+  if (type === "system") return "/chef/onboarding";
   return null;
 }

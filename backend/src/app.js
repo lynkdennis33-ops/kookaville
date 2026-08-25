@@ -31,16 +31,9 @@ app.use(
   })
 );
 
-// Rate limiting — three separate policies so messaging cannot exhaust the auth budget
-// and auth cannot exhaust the general API budget.
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20, // strict — prevents brute-force; still comfortable for dev/testing
-  message: { success: false, message: 'Too many authentication attempts, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
+// Rate limiting — separate policies per concern so one bucket cannot exhaust another.
+// Login/signup/password-reset get tight per-route limits (defined in auth.routes.js).
+// GET /auth/me (session restore) is covered by the generous apiLimiter below.
 const messagingLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200, // generous — REST is used only for initial load, send, and mark-read; socket handles real-time
@@ -81,7 +74,8 @@ app.get('/health', (req, res) => {
 });
 
 // Routes — each group carries its own limiter; no endpoint is double-limited
-app.use('/api/auth', authLimiter, authRoutes);
+// /auth/me uses apiLimiter; login/signup/reset use tighter per-route limiters in auth.routes.js
+app.use('/api/auth', apiLimiter, authRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/chef', apiLimiter, chefRoutes);
 app.use('/api/categories', apiLimiter, categoryRoutes);

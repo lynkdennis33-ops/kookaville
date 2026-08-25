@@ -10,77 +10,116 @@ import React, {
 import api from "@/lib/api";
 import { clearToken } from "@/lib/token";
 
-/**
- * AuthContext — single source of truth for authentication state.
- *
- * Architecture decision:
- *  - Context lives at the root layout so every page and component can access it.
- *  - The JWT is stored in a first-party cookie by auth.service. lib/api.js
- *    reads it and attaches it as a Bearer token on every request.
- *  - `login()` is called by auth pages after the API returns a user object.
- *    The token is already stored by auth.service before login() is called.
- *  - `logout()` clears the cookie and resets local React state.
- */
-
 const AuthContext = createContext(null);
+
+// ─── sessionStorage helpers (SSR-safe) ────────────────────────────────────────
+
+function getChefFlag() {
+  try { return sessionStorage.getItem("chef_session_established"); } catch { return null; }
+}
+function setChefFlag() {
+  try { sessionStorage.setItem("chef_session_established", "true"); } catch {}
+}
+function clearChefFlag() {
+  try { sessionStorage.removeItem("chef_session_established"); } catch {}
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // True when the user's DB role is "chef" but the current browser session was
+  // originally issued for a "client". The user must log out and back in.
+  const [needsChefTransition, setNeedsChefTransition] = useState(false);
 
   /**
-   * Rehydrate auth state by asking the backend who the current session owner is.
-   * Called once on mount. Reads the stored JWT cookie via api.js interceptor.
+   * Apply a user payload and decide whether the chef-transition dialog is needed.
+   * Safe to call from multiple code paths (initial load, polling, manual refresh).
+   */
+  const applyUser = useCallback((userData) => {
+    setUser(userData);
+    if (userData?.role === "chef") {
+      // No sessionStorage flag means this is a promoted client, not a fresh chef login
+      setNeedsChefTransition(!getChefFlag());
+    } else {
+      setNeedsChefTransition(false);
+    }
+  }, []);
+
+  /**
+   * Full refresh: rehydrates auth state from the backend.
+   * Sets the loading spinner — only call from mounts or explicit user actions.
    */
   const refreshUser = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/auth/me");
-      setUser(data.data.user);
+      applyUser(data.data.user);
     } catch {
-      // No valid session — treat as unauthenticated
       setUser(null);
+      setNeedsChefTransition(false);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyUser]);
 
-  // Run once on mount to restore session from cookie
+  // Restore session on mount
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
 
-  // Listen for 401 responses dispatched by api.js interceptor.
-  // Clears the session when the backend reports the token is expired/invalid.
+  // Listen for 401 responses dispatched by api.js interceptor
   useEffect(() => {
     const handleUnauthorized = () => {
       clearToken();
+      clearChefFlag();
       setUser(null);
+      setNeedsChefTransition(false);
     };
     window.addEventListener("auth:unauthorized", handleUnauthorized);
-    return () =>
-      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
   }, []);
 
   /**
-   * Called by login/signup pages after a successful API response.
-   * The token is already stored by auth.service before this is called.
+   * Background poll — checks for chef approval while the user is browsing as a client.
+   * Uses a generous interval (60 s) to stay well within the apiLimiter budget.
+   * Stops automatically once the role changes away from "client".
+   */
+  useEffect(() => {
+    if (!user || user.role !== "client") return;
+    const id = setInterval(async () => {
+      try {
+        const { data } = await api.get("/auth/me");
+        applyUser(data.data.user);
+      } catch {
+        // Silently ignore network errors in background poll
+      }
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [user?.role, applyUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Called by auth pages after a successful credential submission.
+   * Token is already stored by auth.service before this is called.
    */
   const login = useCallback((userData) => {
+    if (userData?.role === "chef") {
+      // Fresh chef login: mark the session so the transition dialog is suppressed
+      setChefFlag();
+    }
     setUser(userData);
+    setNeedsChefTransition(false);
   }, []);
 
   /**
-   * Clears the JWT cookie and resets local state.
+   * Clears the JWT cookie and resets all local state.
    */
   const logout = useCallback(async () => {
-    try {
-      clearToken();
-    } catch {
-      // Always clear local state even if something goes wrong
-    } finally {
-      setUser(null);
-    }
+    clearToken();
+    clearChefFlag();
+    setUser(null);
+    setNeedsChefTransition(false);
   }, []);
 
   const value = {
@@ -90,6 +129,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     refreshUser,
+    needsChefTransition,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -97,10 +137,6 @@ export function AuthProvider({ children }) {
 
 /**
  * useAuth — consume auth state in any client component.
- *
- * Usage:
- *   const { user, isAuthenticated, login, logout } = useAuth();
- *
  * Throws if used outside of AuthProvider (fail-fast to catch misuse early).
  */
 export function useAuth() {

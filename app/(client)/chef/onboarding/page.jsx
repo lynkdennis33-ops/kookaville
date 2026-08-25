@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Stepper } from "@/components/ui/stepper";
 import { RequireAuth } from "@/components/shared/require-auth";
 import { LoadingPage } from "@/components/shared/loading";
+import { ChefTransitionDialog } from "@/components/shared/chef-transition-dialog";
 import { useAuth } from "@/context/AuthContext";
 import {
   getMyChefProfile,
@@ -162,6 +164,7 @@ export default function ChefOnboardingPage() {
 function OnboardingContent() {
   const { refreshUser } = useAuth();
   const queryClient = useQueryClient();
+  const [localApproved, setLocalApproved] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["my-chef-profile"],
@@ -174,7 +177,23 @@ function OnboardingContent() {
       }
     },
     retry: false,
+    // Poll every 30s while pending so the UI updates as soon as admin approves
+    refetchInterval: (query) =>
+      query.state.data?.verificationStatus === "pending" ? 30_000 : false,
   });
+
+  // Sync AuthContext when profile transitions to approved.
+  useEffect(() => {
+    if (profile?.verificationStatus === "approved") {
+      refreshUser();
+    }
+  }, [profile?.verificationStatus, refreshUser]);
+
+  // Called by PendingView when a manual status check returns approved.
+  const handleApproved = useCallback(async () => {
+    setLocalApproved(true);
+    await refreshUser();
+  }, [refreshUser]);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["my-chef-profile"] });
@@ -183,8 +202,14 @@ function OnboardingContent() {
 
   if (isLoading) return <LoadingPage text="Checking your application status…" />;
 
+  // Show blocking transition overlay — covers both the button-click path and
+  // the page-loaded-while-already-approved path (persistence after refresh).
+  if (localApproved || profile?.verificationStatus === "approved") {
+    return <ChefTransitionDialog />;
+  }
+
   if (profile) {
-    return <ProfileStatusView profile={profile} onRefresh={handleRefresh} />;
+    return <ProfileStatusView profile={profile} onRefresh={handleRefresh} onApproved={handleApproved} />;
   }
 
   return <ApplicationForm onSuccess={handleRefresh} />;
@@ -192,49 +217,39 @@ function OnboardingContent() {
 
 // ─── Status views ─────────────────────────────────────────────────────────────
 
-function ProfileStatusView({ profile, onRefresh }) {
+function ProfileStatusView({ profile, onRefresh, onApproved }) {
   const { verificationStatus } = profile;
-  if (verificationStatus === "approved") return <ApprovedView />;
-  if (verificationStatus === "pending") return <PendingView profile={profile} />;
+  if (verificationStatus === "pending") return <PendingView profile={profile} onApproved={onApproved} />;
   if (verificationStatus === "rejected") {
     return <RejectedView profile={profile} onRefresh={onRefresh} />;
   }
   return null;
 }
 
-function ApprovedView() {
-  const router = useRouter();
-  const { refreshUser } = useAuth();
+function PendingView({ profile, onApproved }) {
+  const [isChecking, setIsChecking] = useState(false);
+  const [statusMessage, setStatusMessage] = useState(null);
 
-  useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
-
-  async function handleGoToPortal() {
-    await refreshUser();
-    router.push("/chef-portal/dashboard");
+  async function handleCheckStatus() {
+    if (isChecking) return;
+    setIsChecking(true);
+    setStatusMessage(null);
+    try {
+      const latest = await getMyChefProfile();
+      if (latest.verificationStatus === "approved") {
+        await onApproved();
+      } else {
+        setStatusMessage(
+          "Your application is still under review. We\u2019ll let you know once a decision has been made.",
+        );
+      }
+    } catch {
+      setStatusMessage("Unable to check status. Please try again.");
+    } finally {
+      setIsChecking(false);
+    }
   }
 
-  return (
-    <div className="mx-auto max-w-2xl px-4 sm:px-6 py-16">
-      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-10 text-center">
-        <CheckCircle2 className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
-        <h1 className="text-2xl font-bold text-emerald-900 mb-3">
-          Application Approved!
-        </h1>
-        <p className="text-emerald-700 mb-8">
-          Congratulations! Your chef account has been approved. You can now
-          access your chef portal to manage bookings, menus, and earnings.
-        </p>
-        <Button onClick={handleGoToPortal} size="lg">
-          Go to Chef Portal <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function PendingView({ profile }) {
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6 py-16">
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8">
@@ -255,6 +270,27 @@ function PendingView({ profile }) {
             Your Application
           </h2>
           <ProfileSummary profile={profile} />
+        </div>
+
+        <div className="mt-6">
+          <Button
+            variant="outline"
+            onClick={handleCheckStatus}
+            disabled={isChecking}
+            className="border-amber-300 text-amber-800 hover:bg-amber-100 w-full sm:w-auto"
+          >
+            {isChecking ? (
+              <>
+                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                Checking Status…
+              </>
+            ) : (
+              "Check Application Status"
+            )}
+          </Button>
+          {statusMessage && (
+            <p className="mt-3 text-sm text-amber-700">{statusMessage}</p>
+          )}
         </div>
       </div>
     </div>
@@ -926,7 +962,6 @@ function ReviewSection({ title, children }) {
     </div>
   );
 }
-
 function ReviewRow({ label, value }) {
   return (
     <div className="flex gap-4 text-sm">
