@@ -58,16 +58,67 @@ class MenuService {
   }
 
   /**
-   * Get all menus belonging to a specific chef
-   * Populates category name
-   * Sorted newest first
+   * Get active menus belonging to a specific chef (public endpoint)
+   * Returns only isActive:true menus so inactive menus are hidden from clients
    */
   async getMenusByChef(chefId) {
-    const menus = await Menu.find({ chef: chefId })
+    const menus = await Menu.find({ chef: chefId, isActive: true })
       .populate('category', 'name')
       .sort({ createdAt: -1 });
 
     return menus;
+  }
+
+  /**
+   * Get ALL menus (including inactive) for the authenticated chef
+   * Used by the Chef Portal — chef can see and manage their inactive menus
+   */
+  async getMyMenus(userId) {
+    const chefProfile = await ChefProfile.findOne({ user: userId });
+
+    if (!chefProfile) {
+      const error = new Error('Chef profile not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const menus = await Menu.find({ chef: chefProfile._id })
+      .populate('category', 'name')
+      .sort({ createdAt: -1 });
+
+    return menus;
+  }
+
+  /**
+   * Toggle isActive on a menu with ownership verification
+   */
+  async toggleMenuActive(userId, menuId) {
+    const chefProfile = await ChefProfile.findOne({ user: userId });
+
+    if (!chefProfile) {
+      const error = new Error('Chef profile not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const menu = await Menu.findById(menuId);
+
+    if (!menu) {
+      const error = new Error('Menu not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (menu.chef.toString() !== chefProfile._id.toString()) {
+      const error = new Error('Forbidden');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    menu.isActive = !menu.isActive;
+    await menu.save();
+
+    return menu.populate('category', 'name');
   }
 
   /**

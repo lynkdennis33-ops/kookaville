@@ -10,6 +10,10 @@ const router = express.Router();
 // Protected route - requires authentication
 router.post('/', auth, menuController.createMenu.bind(menuController));
 
+// GET the authenticated chef's own menus (active + inactive) — must be before /:chefId
+// Protected — chef role only
+router.get('/my', auth, authorize('chef'), menuController.getMyMenus.bind(menuController));
+
 // GET all menus belonging to a specific chef
 // Public route
 router.get('/:chefId', menuController.getMenusByChef.bind(menuController));
@@ -28,6 +32,10 @@ router.patch(
   uploadSingle,
   menuController.updateMenuImage.bind(menuController)
 );
+
+// PATCH activate or deactivate a menu (toggles isActive)
+// Protected — requires authentication, ownership verified in service
+router.patch('/:id/active', auth, menuController.toggleMenuActive.bind(menuController));
 
 // DELETE a menu
 // Protected route - requires authentication

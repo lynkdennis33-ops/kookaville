@@ -23,6 +23,42 @@ class MenuController {
   }
 
   /**
+   * Get the authenticated chef's own menus (including inactive)
+   * Protected — chef role only
+   */
+  async getMyMenus(req, res, next) {
+    try {
+      const menus = await menuService.getMyMenus(req.user._id);
+
+      res.status(200).json({
+        success: true,
+        data: { menus },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Toggle isActive on a menu
+   * Protected — requires authentication, ownership verified in service
+   */
+  async toggleMenuActive(req, res, next) {
+    try {
+      const { id } = req.params;
+      const menu = await menuService.toggleMenuActive(req.user._id, id);
+
+      res.status(200).json({
+        success: true,
+        message: `Menu ${menu.isActive ? 'activated' : 'deactivated'} successfully.`,
+        data: { menu },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get all menus belonging to a specific chef
    * Public route
    * Populates category name

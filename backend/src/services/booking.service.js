@@ -98,6 +98,13 @@ class BookingService {
       throw error;
     }
 
+    // Reject bookings for inactive menus
+    if (!menu.isActive) {
+      const error = new Error('This menu is no longer available for booking.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Verify the chef is approved — only approved chefs are bookable
     const chefProfile = await ChefProfile.findById(menu.chef);
     if (!chefProfile || chefProfile.verificationStatus !== 'approved') {

@@ -52,6 +52,10 @@ const menuSchema = new mongoose.Schema(
       required: [true, 'Ingredients are required'],
       default: [],
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
